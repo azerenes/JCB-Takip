@@ -19,7 +19,6 @@
     "mqtt": "^5.3.5",
     "pdfkit": "^0.13.0",
     "socket.io": "^4.7.2",
-    "turf-junction": "^1.0.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

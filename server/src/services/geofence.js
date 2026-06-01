@@ -1,6 +1,5 @@
 const Geofence = require('../models/Geofence');
 const Alert = require('../models/Alert');
-const turf = require('turf-junction');
 
 function distance(lat1, lon1, lat2, lon2) {
     const R = 6371000;
