@@ -1,0 +1,14 @@
+node_modules/
+.env
+*.log
+exports/
+__pycache__/
+.pio/
+.pioenvs/
+.piolibdeps/
+build/
+dist/
+*.csv
+*.pdf
+.DS_Store
+Thumbs.db

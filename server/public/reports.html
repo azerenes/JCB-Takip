@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCB Tracker - Raporlar</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">🚜 JCB Tracker</div>
+        <div class="nav-links">
+            <a href="index.html">Harita</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="reports.html" class="active">Raporlar</a>
+            <a href="#" id="logoutBtn">Çıkış</a>
+        </div>
+    </nav>
+
+    <div class="reports-container">
+        <div class="report-card">
+            <h2>Cihaz Raporu</h2>
+            <div class="form-group">
+                <label>Cihaz</label>
+                <select id="reportDevice"></select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Başlangıç</label>
+                    <input type="datetime-local" id="reportStart" />
+                </div>
+                <div class="form-group">
+                    <label>Bitiş</label>
+                    <input type="datetime-local" id="reportEnd" />
+                </div>
+            </div>
+            <div class="form-row">
+                <button onclick="downloadCSV()" class="btn-outline">CSV İndir</button>
+                <button onclick="downloadPDF()" class="btn-outline">PDF İndir</button>
+                <button onclick="loadDeviceReport()" class="btn-primary">Raporu Gör</button>
+            </div>
+            <div id="deviceReportResult" class="report-result"></div>
+        </div>
+
+        <div class="report-card">
+            <h2>Özet Rapor (Tüm Cihazlar)</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Başlangıç</label>
+                    <input type="date" id="summaryStart" />
+                </div>
+                <div class="form-group">
+                    <label>Bitiş</label>
+                    <input type="date" id="summaryEnd" />
+                </div>
+            </div>
+            <button onclick="loadSummaryReport()" class="btn-primary">Özet Raporu Gör</button>
+            <div id="summaryReportResult" class="report-result"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
