@@ -1,30 +1,38 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/ESP32-Geliştirme-blue?style=for-the-badge&logo=espressif" alt="ESP32"/>
+  <img src="https://img.shields.io/badge/Version-2.0.0-blue?style=for-the-badge" alt="Version"/>
   <img src="https://img.shields.io/badge/Node.js-20+-green?style=for-the-badge&logo=node.js" alt="Node.js"/>
   <img src="https://img.shields.io/badge/MongoDB-7.0-brightgreen?style=for-the-badge&logo=mongodb" alt="MongoDB"/>
   <img src="https://img.shields.io/badge/EMQX-5.3-purple?style=for-the-badge&logo=mqtt" alt="EMQX"/>
-  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker" alt="Docker"/>
-  <img src="https://img.shields.io/badge/PlatformIO-IDE-orange?style=for-the-badge&logo=platformio" alt="PlatformIO"/>
+  <img src="https://img.shields.io/badge/Docker-One%20Command-2496ED?style=for-the-badge&logo=docker" alt="Docker"/>
+  <img src="https://img.shields.io/badge/License-Commercial-orange?style=for-the-badge" alt="License"/>
 </p>
 
-<h1 align="center">🚜 JCB Tracker</h1>
+<h1 align="center">JCB Tracker</h1>
 
 <p align="center">
-  <b>Endüstriyel İş Makineleri için Gerçek Zamanlı Takip Sistemi</b><br>
-  <i>CAN-Bus, GPS, 4G/LTE, MQTT ve Web Panel ile donatılmış tam kapsamlı IoT çözümü</i>
+  <b>İş Makineleri için Profesyonel Takip Sistemi</b><br>
+  <i>UTTS benzeri, çok kiracılı, satılmaya hazır IoT takip platformu</i>
 </p>
 
 <p align="center">
-  <br>
   <b>🇹🇷 Türkçe</b> · <a href="#english">English</a>
   <br><br>
   <a href="#-özellikler">Özellikler</a> •
-  <a href="#-mimari">Mimari</a> •
   <a href="#-hızlı-başlangıç">Hızlı Başlangıç</a> •
-  <a href="#-geliştirme-rehberi">Geliştirme</a> •
+  <a href="#-müşteri-yönetimi">Müşteri Yönetimi</a> •
   <a href="#-donanım">Donanım</a> •
-  <a href="#-test">Test</a>
+  <a href="#-api">API</a>
 </p>
+
+<hr>
+
+<p align="center">
+<b>📦 Satılmaya Hazır Turn-Key Çözüm</b><br>
+Kendi sunucunuza kurun, müşterilerinize filo takip hizmeti satmaya başlayın.<br>
+<code>docker compose up -d</code> ile 2 dakikada çalışır.
+</p>
+
+<hr>
 
 <br>
 

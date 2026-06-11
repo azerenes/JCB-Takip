@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kurulum - JCB Tracker</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.wizard { background: #1e293b; border-radius: 24px; padding: 48px; max-width: 640px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid #334155; }
+.header { text-align: center; margin-bottom: 40px; }
+.header .logo { width: 64px; height: 64px; background: #2563eb; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 28px; color: #fff; }
+.header h1 { color: #f1f5f9; font-size: 24px; font-weight: 700; }
+.header p { color: #94a3b8; font-size: 14px; margin-top: 8px; }
+.steps { display: flex; justify-content: center; gap: 8px; margin-bottom: 40px; }
+.step { width: 32px; height: 4px; border-radius: 2px; background: #334155; transition: all 0.3s; }
+.step.active { background: #2563eb; width: 48px; }
+.step.done { background: #22c55e; }
+.step-content { display: none; }
+.step-content.active { display: block; }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; color: #cbd5e1; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+.form-group input, .form-group select { width: 100%; padding: 12px 16px; background: #0f172a; border: 1px solid #334155; border-radius: 12px; color: #f1f5f9; font-size: 15px; outline: none; transition: border-color 0.2s; }
+.form-group input:focus, .form-group select:focus { border-color: #2563eb; }
+.form-group .hint { color: #64748b; font-size: 12px; margin-top: 4px; }
+.form-row { display: flex; gap: 16px; }
+.form-row .form-group { flex: 1; }
+.btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+.btn-primary { background: #2563eb; color: #fff; }
+.btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-secondary { background: #334155; color: #cbd5e1; }
+.btn-secondary:hover { background: #475569; }
+.btn-success { background: #22c55e; color: #fff; }
+.btn-success:hover { background: #16a34a; }
+.error { background: #7f1d1d; color: #fca5a5; padding: 12px 16px; border-radius: 12px; font-size: 14px; margin-bottom: 16px; display: none; border: 1px solid #991b1b; }
+.success { background: #14532d; color: #86efac; padding: 12px 16px; border-radius: 12px; font-size: 14px; margin-bottom: 16px; display: none; border: 1px solid #166534; }
+.license-info { background: #0f172a; border-radius: 12px; padding: 16px; margin-top: 12px; }
+.license-info .row { display: flex; justify-content: space-between; padding: 6px 0; color: #94a3b8; font-size: 14px; }
+.license-info .row span:last-child { color: #f1f5f9; font-weight: 500; }
+.feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+.feature-item { background: #0f172a; border-radius: 12px; padding: 16px; text-align: center; }
+.feature-item .icon { font-size: 24px; margin-bottom: 8px; }
+.feature-item .label { color: #94a3b8; font-size: 13px; }
+.feature-item .value { color: #f1f5f9; font-size: 18px; font-weight: 700; margin-top: 4px; }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #334155; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.final-message { text-align: center; padding: 20px 0; }
+.final-message .checkmark { width: 72px; height: 72px; background: #22c55e; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 36px; color: #fff; margin-bottom: 20px; }
+.final-message h2 { color: #f1f5f9; font-size: 22px; margin-bottom: 8px; }
+.final-message p { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+@media (max-width: 600px) { .wizard { padding: 24px; } .form-row { flex-direction: column; gap: 0; } .feature-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wizard" id="app">
+    <div class="header">
+        <div class="logo">&#x1f4f1;</div>
+        <h1>JCB Tracker Kurulumu</h1>
+        <p>Sisteminizi kullanima hazirlamak icin siyahbazi tamamlayin</p>
+    </div>
+
+    <div class="steps">
+        <div class="step active" data-step="0"></div>
+        <div class="step" data-step="1"></div>
+        <div class="step" data-step="2"></div>
+        <div class="step" data-step="3"></div>
+        <div class="step" data-step="4"></div>
+    </div>
+
+    <div class="error" id="errorMsg"></div>
+    <div class="success" id="successMsg"></div>
+
+    <!-- Step 0: Hos Geldiniz -->
+    <div class="step-content active" data-step="0">
+        <h2 style="color:#f1f5f9;font-size:20px;margin-bottom:12px;">JCB Tracker'a Hos Geldiniz</h2>
+        <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin-bottom:24px;">
+            Bu sihirbaz, sisteminizi dakikalar icinde kullanima hazir hale getirecektir.<br><br>
+            <strong>Kurulum suresince:</strong><br>
+            &bull; Lisans anahtarinizi gireceksiniz (veya deneme surumu baslatacaksiniz)<br>
+            &bull; Yonetici hesabinizi olusturacaksiniz<br>
+            &bull; Firma bilgilerinizi ve tercihlerinizi ayarlayacaksiniz
+        </p>
+        <div class="feature-grid">
+            <div class="feature-item"><div class="icon">&#x1f4ca;</div><div class="label">Gercek Zamanli Takip</div><div class="value">Canli</div></div>
+            <div class="feature-item"><div class="icon">&#x1f4cd;</div><div class="label">Konum Gecmisi</div><div class="value">7/24</div></div>
+            <div class="feature-item"><div class="icon">&#x26a0;</div><div class="label">Akilli Uyarilar</div><div class="value">Aninda</div></div>
+            <div class="feature-item"><div class="icon">&#x1f4dd;</div><div class="label">ELD Kayitlari</div><div class="value">Otomatik</div></div>
+        </div>
+        <button class="btn btn-primary" onclick="nextStep()">Baslayalim</button>
+    </div>
+
+    <!-- Step 1: Lisans -->
+    <div class="step-content" data-step="1">
+        <h2 style="color:#f1f5f9;font-size:20px;margin-bottom:8px;">Lisans Anahtari</h2>
+        <p style="color:#94a3b8;font-size:14px;margin-bottom:20px;">Satinaldiginiz lisans anahtarini girin veya deneme surumu ile devam edin</p>
+        <div class="form-group">
+            <label>Lisans Anahtari</label>
+            <input type="text" id="licenseKey" placeholder="JCB-XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXX" style="text-transform:uppercase;font-family:monospace;letter-spacing:1px;">
+            <div class="hint">Bos birakirsaniz 30 gunluk deneme baslatilir</div>
+        </div>
+        <div id="licenseInfo" class="license-info" style="display:none;"></div>
+        <button class="btn btn-secondary" onclick="validateKey()" id="validateBtn">Anahtari Dogrula</button>
+        <div style="display:flex;gap:12px;margin-top:16px;">
+            <button class="btn btn-secondary" onclick="prevStep()" style="flex:1;">Geri</button>
+            <button class="btn btn-primary" onclick="nextStep()" id="licenseNext" style="flex:1;" disabled>Devam Et</button>
+        </div>
+    </div>
+
+    <!-- Step 2: Yonetici Hesabi -->
+    <div class="step-content" data-step="2">
+        <h2 style="color:#f1f5f9;font-size:20px;margin-bottom:8px;">Yonetici Hesabi</h2>
+        <p style="color:#94a3b8;font-size:14px;margin-bottom:20px;">Sisteme ilk giris yapacak yonetici hesabini olusturun</p>
+        <div class="form-group">
+            <label>E-posta</label>
+            <input type="email" id="adminEmail" placeholder="admin@firma.com">
+        </div>
+        <div class="form-group">
+            <label>Sifre</label>
+            <input type="password" id="adminPassword" placeholder="En az 6 karakter">
+            <div class="hint">En az 6 karakter, guclu bir sifre kullanin</div>
+        </div>
+        <div class="form-group">
+            <label>Sifre Tekrar</label>
+            <input type="password" id="adminPassword2" placeholder="Sifreyi tekrar girin">
+        </div>
+        <div style="display:flex;gap:12px;">
+            <button class="btn btn-secondary" onclick="prevStep()" style="flex:1;">Geri</button>
+            <button class="btn btn-primary" onclick="nextStep()" id="adminNext" style="flex:1;" disabled>Devam Et</button>
+        </div>
+    </div>
+
+    <!-- Step 3: Firma Bilgileri -->
+    <div class="step-content" data-step="3">
+        <h2 style="color:#f1f5f9;font-size:20px;margin-bottom:8px;">Firma Bilgileri</h2>
+        <p style="color:#94a3b8;font-size:14px;margin-bottom:20px;">Sistemde gorunecek firma bilgilerinizi girin</p>
+        <div class="form-group">
+            <label>Firma Adi *</label>
+            <input type="text" id="companyName" placeholder="Firma Adi">
+        </div>
+        <div class="form-group">
+            <label>Firma Slogani</label>
+            <input type="text" id="companyTagline" placeholder="Filoloziniz icin akilli takip cozumu">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Renk</label>
+                <input type="color" id="primaryColor" value="#2563eb" style="height:48px;padding:4px;">
+            </div>
+            <div class="form-group">
+                <label>Dil</label>
+                <select id="language">
+                    <option value="tr">Turkce</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Destek E-postasi</label>
+            <input type="email" id="supportEmail" placeholder="destek@firma.com">
+        </div>
+        <div style="display:flex;gap:12px;">
+            <button class="btn btn-secondary" onclick="prevStep()" style="flex:1;">Geri</button>
+            <button class="btn btn-primary" onclick="nextStep()" id="companyNext" style="flex:1;" disabled>Devam Et</button>
+        </div>
+    </div>
+
+    <!-- Step 4: Ozet ve Tamamla -->
+    <div class="step-content" data-step="4">
+        <h2 style="color:#f1f5f9;font-size:20px;margin-bottom:8px;">Kurulum Ozeti</h2>
+        <p style="color:#94a3b8;font-size:14px;margin-bottom:20px;">Bilgileri kontrol edin ve kurulumu tamamlayin</p>
+        <div class="license-info">
+            <div class="row"><span>Lisans</span><span id="summaryLicense">30 Gun Deneme</span></div>
+            <div class="row"><span>Cihaz Limiti</span><span id="summaryDevices">10</span></div>
+            <div class="row"><span>Kullanici Limiti</span><span id="summaryUsers">5</span></div>
+            <div class="row"><span>Yonetici</span><span id="summaryEmail">-</span></div>
+            <div class="row"><span>Firma</span><span id="summaryCompany">-</span></div>
+            <div class="row"><span>Dil</span><span id="summaryLang">Turkce</span></div>
+        </div>
+        <button class="btn btn-success" onclick="completeSetup()" id="completeBtn">
+            <span class="spinner" id="completeSpinner" style="display:none;"></span>
+            Kurulumu Tamamla
+        </button>
+        <button class="btn btn-secondary" onclick="prevStep()" style="margin-top:8px;">Geri</button>
+    </div>
+
+    <!-- Step 5: Tamamlandi -->
+    <div class="step-content" data-step="5">
+        <div class="final-message">
+            <div class="checkmark">&#x2713;</div>
+            <h2>Kurulum Tamamlandi!</h2>
+            <p>Sisteminiz kullanima hazir. Giris yapmak icin yonlendiriliyorsunuz...</p>
+            <div class="spinner" style="width:32px;height:32px;border-width:3px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let state = { step: 0, licenseValid: false, licenseData: null };
+
+function updateSteps() {
+    document.querySelectorAll('.step').forEach((el, i) => {
+        el.className = 'step';
+        if (i < state.step) el.classList.add('done');
+        else if (i === state.step) el.classList.add('active');
+    });
+    document.querySelectorAll('.step-content').forEach(el => {
+        el.classList.toggle('active', parseInt(el.dataset.step) === state.step);
+    });
+    document.getElementById('errorMsg').style.display = 'none';
+    document.getElementById('successMsg').style.display = 'none';
+}
+
+function nextStep() {
+    if (state.step === 1 && !state.licenseValid && document.getElementById('licenseKey').value.trim()) {
+        showError('Lisans anahtarini once dogrulayin veya bos birakip devam edin');
+        return;
+    }
+    if (state.step === 2) {
+        const pwd = document.getElementById('adminPassword').value;
+        const pwd2 = document.getElementById('adminPassword2').value;
+        if (!document.getElementById('adminEmail').value.trim()) { showError('E-posta adresi gerekli'); return; }
+        if (!pwd || pwd.length < 6) { showError('Sifre en az 6 karakter olmalidir'); return; }
+        if (pwd !== pwd2) { showError('Sifreler eslesmiyor'); return; }
+    }
+    if (state.step === 3) {
+        if (!document.getElementById('companyName').value.trim()) { showError('Firma adi gerekli'); return; }
+    }
+    if (state.step === 4) { return; }
+    state.step++;
+    document.getElementById('errorMsg').style.display = 'none';
+    updateSteps();
+    if (state.step === 4) updateSummary();
+}
+
+function prevStep() {
+    if (state.step > 0) { state.step--; updateSteps(); }
+}
+
+function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg; el.style.display = 'block';
+}
+
+function showSuccess(msg) {
+    const el = document.getElementById('successMsg');
+    el.textContent = msg; el.style.display = 'block';
+}
+
+async function validateKey() {
+    const key = document.getElementById('licenseKey').value.trim().toUpperCase();
+    if (!key) { state.licenseValid = true; state.licenseData = null; document.getElementById('licenseInfo').style.display = 'none'; document.getElementById('licenseNext').disabled = false; return; }
+
+    const btn = document.getElementById('validateBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Dogrulaniyor...';
+
+    try {
+        const res = await fetch('/api/setup/validate-key', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key })
+        });
+        const data = await res.json();
+        if (data.valid) {
+            state.licenseValid = true;
+            state.licenseData = data;
+            const info = document.getElementById('licenseInfo');
+            info.style.display = 'block';
+            const typeNames = { trial: 'Deneme', basic: 'Basit', professional: 'Profesyonel', enterprise: 'Kurumsal' };
+            info.innerHTML = '<div class="row"><span>Lisans Turu</span><span>' + (typeNames[data.type] || data.type) + '</span></div>' +
+                '<div class="row"><span>Cihaz Limiti</span><span>' + data.deviceLimit + '</span></div>' +
+                '<div class="row"><span>Kullanici Limiti</span><span>' + data.userLimit + '</span></div>' +
+                '<div class="row"><span>Gecerlilik</span><span>' + data.durationDays + ' gun</span></div>';
+            document.getElementById('licenseNext').disabled = false;
+            showSuccess('Lisans anahtari dogrulandi!');
+        } else {
+            state.licenseValid = false;
+            showError(data.error || 'Gecersiz lisans anahtari');
+        }
+    } catch (e) {
+        showError('Dogrulama hatasi. Sunucu baglantisini kontrol edin.');
+    }
+    btn.disabled = false; btn.textContent = 'Anahtari Dogrula';
+}
+
+document.getElementById('adminEmail').addEventListener('input', checkAdminForm);
+document.getElementById('adminPassword').addEventListener('input', checkAdminForm);
+document.getElementById('adminPassword2').addEventListener('input', checkAdminForm);
+
+function checkAdminForm() {
+    const valid = document.getElementById('adminEmail').value.trim() &&
+        document.getElementById('adminPassword').value.length >= 6 &&
+        document.getElementById('adminPassword2').value === document.getElementById('adminPassword').value;
+    document.getElementById('adminNext').disabled = !valid;
+}
+
+document.getElementById('companyName').addEventListener('input', function() {
+    document.getElementById('companyNext').disabled = !this.value.trim();
+});
+
+function updateSummary() {
+    const typeNames = { trial: '30 Gun Deneme', basic: 'Basit', professional: 'Profesyonel', enterprise: 'Kurumsal' };
+    const ld = state.licenseData;
+    document.getElementById('summaryLicense').textContent = ld ? (typeNames[ld.type] || ld.type) + ' (' + ld.durationDays + ' gun)' : '30 Gun Deneme';
+    document.getElementById('summaryDevices').textContent = ld ? ld.deviceLimit : '10';
+    document.getElementById('summaryUsers').textContent = ld ? ld.userLimit : '5';
+    document.getElementById('summaryEmail').textContent = document.getElementById('adminEmail').value;
+    document.getElementById('summaryCompany').textContent = document.getElementById('companyName').value;
+    document.getElementById('summaryLang').textContent = document.getElementById('language').value === 'tr' ? 'Turkce' : 'English';
+}
+
+async function completeSetup() {
+    const btn = document.getElementById('completeBtn');
+    const spinner = document.getElementById('completeSpinner');
+    btn.disabled = true; spinner.style.display = 'inline-block';
+    btn.innerHTML = '<span class="spinner"></span>Kurulum yapiliyor...';
+
+    try {
+        const body = {
+            licenseKey: (document.getElementById('licenseKey').value || '').trim().toUpperCase(),
+            companyName: document.getElementById('companyName').value.trim(),
+            adminEmail: document.getElementById('adminEmail').value.trim(),
+            adminPassword: document.getElementById('adminPassword').value,
+            companyTagline: document.getElementById('companyTagline').value.trim(),
+            primaryColor: document.getElementById('primaryColor').value,
+            supportEmail: document.getElementById('supportEmail').value.trim(),
+            language: document.getElementById('language').value
+        };
+
+        const res = await fetch('/api/setup/complete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            state.step = 5;
+            updateSteps();
+            setTimeout(() => { window.location.href = '/login.html'; }, 3000);
+        } else {
+            showError(data.error || 'Kurulum tamamlanamadi');
+            btn.disabled = false; spinner.style.display = 'none';
+            btn.innerHTML = 'Kurulumu Tamamla';
+        }
+    } catch (e) {
+        showError('Sunucu hatasi. Lutfen tekrar deneyin.');
+        btn.disabled = false; spinner.style.display = 'none';
+        btn.innerHTML = 'Kurulumu Tamamla';
+    }
+}
+
+// Check if setup already done
+fetch('/api/setup/status').then(r => r.json()).then(data => {
+    if (data.setupComplete) {
+        document.querySelector('.wizard').innerHTML =
+            '<div class="final-message"><div class="checkmark">&#x2713;</div>' +
+            '<h2>Sistem Zaten Kurulu</h2><p>Bu sistem daha once yapilandirilmis.</p>' +
+            '<a href="/login.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;margin-top:16px;">Giris Yap</a></div>';
+    }
+}).catch(() => {});
+</script>
+</body>
+</html>

@@ -63,9 +63,11 @@ services:
       MONGODB_URI: mongodb://mongo:27017/jcb_tracker
       MQTT_BROKER: mqtt://emqx:1883
       MQTT_WS_BROKER: ws://emqx:8083
-      JWT_SECRET: ${JWT_SECRET:-jcb_tracker_default_secret}
+      JWT_SECRET: ${JWT_SECRET:-degistirin_bu_sifreyi}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@jcbtracker.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      REQUIRE_SETUP: ${REQUIRE_SETUP:-true}
+      TZ: ${TZ:-Europe/Istanbul}
     volumes:
       - ./server/exports:/app/exports
     depends_on:

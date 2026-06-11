@@ -1,154 +1,108 @@
-const API = '/api';
-let token = localStorage.getItem('jcb_token');
+let saToken = null;
 
-async function api(path, opts = {}) {
-    const res = await fetch(`${API}/superadmin${path}`, {
+function getSAToken() { return saToken || localStorage.getItem('token'); }
+
+async function saApi(path, opts = {}) {
+    const res = await fetch(`/api/superadmin${path}`, {
         ...opts,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...opts.headers }
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getSAToken()}`, ...opts.headers }
     });
-    if (res.status === 401) { window.location.href = '/app.html'; return null; }
-    if (res.status === 403) { showNotification('Yetkiniz yok', 'error'); return null; }
     const data = await res.json();
     if (!res.ok) { showNotification(data.error || 'Hata', 'error'); return null; }
     return data;
 }
 
-function showNotification(msg, type = 'info') {
-    const c = document.getElementById('notificationContainer');
-    if (!c) return;
+function loadSuperAdmin() {
+    saToken = localStorage.getItem('token');
+    const main = document.getElementById('mainContent');
+
+    let html = `
+    <div style="margin-bottom:20px;">
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:4px;">Super Admin Paneli</h2>
+        <p style="color:var(--text2);font-size:14px;">Tum tenant'lari ve sistemi yonetin</p>
+    </div>
+    <div class="stats-grid" id="saStats">
+        <div class="stat-card"><div class="label">Toplam Tenant</div><div class="value" id="saTenants">-</div></div>
+        <div class="stat-card"><div class="label">Toplam Cihaz</div><div class="value" id="saDevices">-</div></div>
+        <div class="stat-card"><div class="label">Toplam Kullanici</div><div class="value" id="saUsers">-</div></div>
+        <div class="stat-card"><div class="label">Aktif Tenant</div><div class="value" id="saActiveTenants">-</div></div>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:16px;">
+        <button onclick="showAddTenant()" style="padding:10px 20px;background:var(--primary);border:none;border-radius:8px;color:#fff;cursor:pointer;">+ Tenant Ekle</button>
+        <button onclick="showGenerateLicenses()" style="padding:10px 20px;background:var(--surface2);border:none;border-radius:8px;color:var(--text);cursor:pointer;">Lisans Uret</button>
+        <button onclick="loadTenantList()" style="padding:10px 20px;background:var(--surface2);border:none;border-radius:8px;color:var(--text);cursor:pointer;">Yenile</button>
+    </div>
+    <div id="saTenantList"><p style="color:var(--text2);">Yukleniyor...</p></div>`;
+
+    main.innerHTML = html;
+    loadSADashboard();
+    loadTenantList();
+}
+
+async function loadSADashboard() {
+    const d = await saApi('/dashboard');
+    if (!d) return;
+    document.getElementById('saTenants').textContent = d.totalTenants;
+    document.getElementById('saDevices').textContent = d.totalDevices;
+    document.getElementById('saUsers').textContent = d.totalUsers;
+    document.getElementById('saActiveTenants').textContent = d.activeTenants;
+}
+
+async function loadTenantList() {
+    const tenants = await saApi('/tenants');
+    if (!tenants) return;
+    const c = document.getElementById('saTenantList');
+    if (tenants.length === 0) { c.innerHTML = '<p style="color:var(--text2);">Henuz tenant yok</p>'; return; }
+
+    c.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+        <tr style="color:var(--text2);font-size:13px;"><th style="text-align:left;padding:8px;">Firma</th><th style="text-align:left;padding:8px;">E-posta</th><th style="text-align:left;padding:8px;">Lisans</th><th style="text-align:left;padding:8px;">Cihaz</th><th style="text-align:left;padding:8px;">Kullanici</th><th style="text-align:left;padding:8px;">Bitis</th><th></th></tr>
+        ${tenants.map(t => `<tr style="border-bottom:1px solid var(--surface2);font-size:14px;">
+            <td style="padding:8px;">${t.companyName}</td>
+            <td style="padding:8px;color:var(--text2);font-size:13px;">${t.contactEmail}</td>
+            <td style="padding:8px;"><span style="background:var(--surface2);padding:2px 8px;border-radius:4px;font-size:12px;">${t.license.type}</span></td>
+            <td style="padding:8px;">${t.stats?.deviceCount || 0}</td>
+            <td style="padding:8px;">${t.stats?.userCount || 0}</td>
+            <td style="padding:8px;font-size:12px;color:${new Date(t.license.expiresAt) < new Date() ? 'var(--danger)' : 'var(--text2)'}">${new Date(t.license.expiresAt).toLocaleDateString('tr-TR')}</td>
+            <td style="padding:8px;"><button onclick="deleteTenant('${t._id}')" style="padding:4px 8px;background:var(--danger);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:11px;">Sil</button></td>
+        </tr>`).join('')}</table>`;
+}
+
+function showAddTenant() {
+    const name = prompt('Firma adi:');
+    if (!name) return;
+    const email = prompt('E-posta:');
+    if (!email) return;
+    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 30);
+    saApi('/tenants', { method:'POST', body:JSON.stringify({ companyName:name, slug, contactEmail:email }) }).then(r => {
+        if (r) { showNotification('Tenant olusturuldu', 'success'); loadTenantList(); loadSADashboard(); }
+    });
+}
+
+function deleteTenant(id) {
+    if (!confirm('Bu tenant ve tum verilerini silmek istediginize emin misiniz?')) return;
+    saApi(`/tenants/${id}`, { method:'DELETE' }).then(() => { showNotification('Silindi', 'success'); loadTenantList(); loadSADashboard(); });
+}
+
+function showGenerateLicenses() {
+    const count = prompt('Kac adet lisans uretilecek?', '1');
+    if (!count) return;
+    const type = prompt('Lisans turu (trial/basic/professional/enterprise):', 'professional');
+    if (!type) return;
+    const deviceLimit = prompt('Cihaz limiti:', '50');
+    if (!deviceLimit) return;
+    saApi('/licenses/generate', { method:'POST', body:JSON.stringify({ count:parseInt(count), type, deviceLimit:parseInt(deviceLimit) }) }).then(r => {
+        if (r) {
+            const keys = r.map(l => l.key).join('\n');
+            alert('Lisanslar olusturuldu:\n\n' + keys);
+            showNotification(`${r.length} lisans olusturuldu`, 'success');
+        }
+    });
+}
+
+function showNotification(msg, type) {
     const n = document.createElement('div');
     n.textContent = msg;
-    Object.assign(n.style, { padding: '12px 20px', borderRadius: '8px', marginBottom: '8px', fontSize: '13px', fontWeight: '500', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', animation: 'slideIn 0.3s ease' });
-    n.style.background = type === 'error' ? '#fee2e2' : type === 'success' ? '#dcfce7' : '#e0f2fe';
-    n.style.color = type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : 'var(--primary)';
-    c.appendChild(n);
-    setTimeout(() => { n.style.opacity = '0'; n.style.transition = 'opacity 0.3s'; setTimeout(() => n.remove(), 300); }, 3000);
+    Object.assign(n.style, { padding:'10px 16px', borderRadius:'8px', marginBottom:'8px', fontSize:'13px', background: type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : 'var(--primary)', color:'#fff', position:'fixed', bottom:'20px', right:'20px', zIndex:'9999', animation:'slideIn 0.3s' });
+    document.body.appendChild(n);
+    setTimeout(() => n.remove(), 3000);
 }
-
-async function loadTenants() {
-    const data = await api('/tenants');
-    if (!data) return;
-    const tbody = document.getElementById('saTenantBody');
-    tbody.innerHTML = data.tenants.map(t => {
-        const lic = t.license || {};
-        const expDate = lic.expiresAt ? new Date(lic.expiresAt) : null;
-        const expired = expDate && expDate < new Date();
-        const badgeCls = expired ? 'badge-expired' : lic.type === 'trial' ? 'badge-trial' : 'badge-active';
-        return `<tr>
-            <td><strong>${t.companyName}</strong></td>
-            <td>${t.contactEmail || '-'}</td>
-            <td><span class="badge ${badgeCls}">${lic.type || 'trial'}</span></td>
-            <td>${t.deviceCount || 0} / ${lic.deviceLimit || '-'}</td>
-            <td>${t.userCount || 0} / ${lic.userLimit || '-'}</td>
-            <td>${expDate ? expDate.toLocaleDateString('tr-TR') : '-'}</td>
-            <td>
-                <button onclick="editTenant('${t._id}')" style="padding:4px 12px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer">Düzenle</button>
-                <button onclick="deleteTenant('${t._id}')" style="padding:4px 12px;font-size:12px;border:1px solid var(--danger);border-radius:6px;background:transparent;color:var(--danger);cursor:pointer">Sil</button>
-            </td>
-        </tr>`;
-    }).join('');
-}
-
-async function loadLicenses() {
-    const data = await api('/licenses');
-    if (!data) return;
-    const tbody = document.getElementById('saLicenseBody');
-    tbody.innerHTML = data.licenses.map(l => {
-        const created = new Date(l.createdAt).toLocaleDateString('tr-TR');
-        const expires = l.expiresAt ? new Date(l.expiresAt).toLocaleDateString('tr-TR') : '-';
-        return `<tr>
-            <td>${l.tenantName || '-'}</td>
-            <td style="font-family:monospace;font-size:12px">${l.activationKey}</td>
-            <td>${l.type}</td>
-            <td>${l.deviceLimit}</td>
-            <td>${created}</td>
-            <td>${expires}</td>
-        </tr>`;
-    }).join('');
-}
-
-async function loadStats() {
-    const data = await api('/dashboard');
-    if (!data) return;
-    document.getElementById('saTotalTenants').textContent = data.totalTenants;
-    document.getElementById('saActiveLicenses').textContent = data.activeLicenses;
-    document.getElementById('saTrialTenants').textContent = data.trialTenants;
-    document.getElementById('saExpiredTenants').textContent = data.expiredLicenses;
-    document.getElementById('saSystemInfo').textContent = JSON.stringify(data.system, null, 2);
-    document.getElementById('saRecentActivity').textContent = data.recentActivity || 'Veri bulunamadı';
-}
-
-function switchSaTab(tab, btn) {
-    document.querySelectorAll('.sa-tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    ['tenants', 'licenses', 'stats'].forEach(t => {
-        document.getElementById(`saTab${t.charAt(0).toUpperCase() + t.slice(1)}`).style.display = t === tab ? 'block' : 'none';
-    });
-    if (tab === 'tenants') loadTenants();
-    if (tab === 'licenses') loadLicenses();
-    if (tab === 'stats') loadStats();
-}
-
-function showTenantModal(data) {
-    document.getElementById('tenantId').value = data?._id || '';
-    document.getElementById('tCompanyName').value = data?.companyName || '';
-    document.getElementById('tSlug').value = data?.slug || '';
-    document.getElementById('tEmail').value = data?.contactEmail || '';
-    document.getElementById('tPhone').value = data?.contactPhone || '';
-    document.getElementById('tLicenseType').value = data?.license?.type || 'trial';
-    document.getElementById('tDeviceLimit').value = data?.license?.deviceLimit || 10;
-    document.getElementById('tUserLimit').value = data?.license?.userLimit || 5;
-    if (data?.license?.expiresAt) {
-        document.getElementById('tExpires').value = new Date(data.license.expiresAt).toISOString().slice(0, 10);
-    } else {
-        const d = new Date(); d.setDate(d.getDate() + 30);
-        document.getElementById('tExpires').value = d.toISOString().slice(0, 10);
-    }
-    document.getElementById('tenantModalTitle').textContent = data ? 'Firma Düzenle' : 'Yeni Firma Ekle';
-    document.getElementById('tenantModal').style.display = 'flex';
-}
-
-function closeTenantModal() { document.getElementById('tenantModal').style.display = 'none'; }
-
-function editTenant(id) {
-    fetch(`${API}/superadmin/tenants`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json()).then(d => {
-            const t = d.tenants.find(x => x._id === id);
-            if (t) showTenantModal(t);
-        });
-}
-
-async function saveTenant() {
-    const id = document.getElementById('tenantId').value;
-    const body = {
-        companyName: document.getElementById('tCompanyName').value,
-        slug: document.getElementById('tSlug').value,
-        contactEmail: document.getElementById('tEmail').value,
-        contactPhone: document.getElementById('tPhone').value,
-        license: {
-            type: document.getElementById('tLicenseType').value,
-            deviceLimit: parseInt(document.getElementById('tDeviceLimit').value),
-            userLimit: parseInt(document.getElementById('tUserLimit').value),
-            expiresAt: document.getElementById('tExpires').value
-        }
-    };
-    if (!body.companyName || !body.slug) { showNotification('Firma adı ve slug zorunlu', 'error'); return; }
-    const data = id ? await api(`/tenants/${id}`, { method: 'PUT', body: JSON.stringify(body) }) : await api('/tenants', { method: 'POST', body: JSON.stringify(body) });
-    if (data) { showNotification(id ? 'Firma güncellendi' : 'Firma oluşturuldu', 'success'); closeTenantModal(); loadTenants(); }
-}
-
-async function deleteTenant(id) {
-    if (!confirm('Bu firmayı silmek istediğinize emin misiniz?')) return;
-    const data = await api(`/tenants/${id}`, { method: 'DELETE' });
-    if (data) { showNotification('Firma silindi', 'success'); loadTenants(); }
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-    if (!token) { window.location.href = '/app.html'; return; }
-    const me = await fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
-    if (!me.isSuperAdmin) { showNotification('Bu sayfaya erişim yetkiniz yok', 'error'); setTimeout(() => { window.location.href = '/app.html'; }, 1500); return; }
-    document.getElementById('userName').textContent = `👤 ${me.name || me.email}`;
-    loadTenants();
-});
-
-document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.removeItem('jcb_token'); window.location.href = '/app.html'; });
