@@ -66,7 +66,7 @@ async function seedAdmin() {
         let superAdmin = await User.findOne({ email: adminEmail });
         if (!superAdmin) {
             superAdmin = await User.create({
-                email: process.env.ADMIN_EMAIL || 'admin@jcbtracker.com',
+                email: adminEmail,
                 password: process.env.ADMIN_PASSWORD || 'admin123',
                 name: 'Super Admin',
                 role: 'admin',
@@ -74,6 +74,9 @@ async function seedAdmin() {
                 permissions: { canManageDevices: true, canViewReports: true, canExportData: true, canManageUsers: true, canUpdateFirmware: true, canConfigureAlerts: true }
             });
             console.log(`[Seed] Super Admin olusturuldu: ${superAdmin.email}`);
+        } else if (!superAdmin.isSuperAdmin) {
+            await User.updateOne({ email: adminEmail }, { $set: { isSuperAdmin: true } });
+            console.log(`[Seed] Mevcut admin super admin yapildi: ${adminEmail}`);
         }
 
         const demoSlug = 'demo-sirket';

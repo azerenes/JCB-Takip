@@ -40,7 +40,7 @@ router.post('/register', async (req, res) => {
     const tenant = await Tenant.create({
         companyName, slug, contactEmail,
         license: {
-            type: plan, deviceLimit: cfg.deviceLimit, userLimit: cfg.userLimit,
+            type: 'trial', deviceLimit: cfg.deviceLimit, userLimit: cfg.userLimit,
             activatedAt: new Date(),
             expiresAt: new Date(Date.now() + cfg.durationDays * 86400000)
         }
