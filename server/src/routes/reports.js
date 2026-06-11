@@ -6,12 +6,14 @@ const Device = require('../models/Device');
 const LocationLog = require('../models/LocationLog');
 const Alert = require('../models/Alert');
 const auth = require('../middleware/auth');
+const scope = require('../middleware/tenant-scope');
 const config = require('../config');
 
-router.get('/device-report/:deviceId', auth, async (req, res) => {
+router.get('/device-report/:deviceId', auth, scope.scopeMiddleware, async (req, res) => {
     try {
         const { start, end, format = 'json' } = req.query;
-        const device = await Device.findOne({ deviceId: req.params.deviceId });
+        const df = scope.deviceFilter(req);
+        const device = await Device.findOne({ deviceId: req.params.deviceId, ...df });
         if (!device) return res.status(404).json({ error: 'Cihaz bulunamadi' });
 
         const filter = { deviceId: req.params.deviceId };
@@ -85,13 +87,14 @@ router.get('/device-report/:deviceId', auth, async (req, res) => {
     }
 });
 
-router.get('/summary-report', auth, async (req, res) => {
+router.get('/summary-report', auth, scope.scopeMiddleware, async (req, res) => {
     try {
         const { start, end } = req.query;
         const startDate = start ? new Date(parseInt(start)) : new Date(Date.now() - 7 * 86400000);
         const endDate = end ? new Date(parseInt(end)) : new Date();
 
-        const devices = await Device.find({ status: 'active' });
+        const df = scope.deviceFilter(req);
+        const devices = await Device.find({ ...df, status: 'active' });
         const deviceIds = devices.map(d => d.deviceId);
 
         const logs = await LocationLog.aggregate([

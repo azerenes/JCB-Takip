@@ -5,24 +5,24 @@ const LocationLog = require('../models/LocationLog');
 const Alert = require('../models/Alert');
 const Geofence = require('../models/Geofence');
 const auth = require('../middleware/auth');
+const scope = require('../middleware/tenant-scope');
 
-router.get('/summary', auth, async (req, res) => {
+router.get('/summary', auth, scope.scopeMiddleware, async (req, res) => {
     try {
-        const total = await Device.countDocuments();
-        const active = await Device.countDocuments({ status: 'active' });
-        const inactive = await Device.countDocuments({ status: 'inactive' });
-        const maintenance = await Device.countDocuments({ status: 'maintenance' });
+        const df = scope.deviceFilter(req);
+        const total = await Device.countDocuments(df);
+        const active = await Device.countDocuments({ ...df, status: 'active' });
+        const inactive = await Device.countDocuments({ ...df, status: 'inactive' });
+        const maintenance = await Device.countDocuments({ ...df, status: 'maintenance' });
 
-        const todayAlerts = await Alert.countDocuments({
-            createdAt: { $gte: new Date().setHours(0, 0, 0, 0) }
-        });
-        const unacknowledged = await Alert.countDocuments({ acknowledged: false });
-        const critical = await Alert.countDocuments({
-            severity: 'critical',
-            acknowledged: false
-        });
+        const deviceIds = req.tenantDeviceIds;
+        const alertFilter = deviceIds ? { deviceId: { $in: deviceIds } } : {};
+        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+        const todayAlerts = await Alert.countDocuments({ ...alertFilter, createdAt: { $gte: todayStart } });
+        const unacknowledged = await Alert.countDocuments({ ...alertFilter, acknowledged: false });
+        const critical = await Alert.countDocuments({ ...alertFilter, severity: 'critical', acknowledged: false });
 
-        const groups = await Device.distinct('group');
+        const groups = await Device.distinct('group', df);
 
         res.json({
             devices: { total, active, inactive, maintenance },
@@ -35,10 +35,10 @@ router.get('/summary', auth, async (req, res) => {
     }
 });
 
-router.get('/devices-live', auth, async (req, res) => {
+router.get('/devices-live', auth, scope.scopeMiddleware, async (req, res) => {
     try {
         const { group } = req.query;
-        const filter = {};
+        const filter = scope.deviceFilter(req);
         if (group) filter.group = group;
 
         const devices = await Device.find(filter, {
@@ -63,9 +63,13 @@ router.get('/devices-live', auth, async (req, res) => {
     }
 });
 
-router.get('/device-history/:deviceId', auth, async (req, res) => {
+router.get('/device-history/:deviceId', auth, scope.scopeMiddleware, async (req, res) => {
     try {
         const { start, end, limit = 1000 } = req.query;
+        const deviceIds = req.tenantDeviceIds;
+        if (deviceIds && !deviceIds.includes(req.params.deviceId)) {
+            return res.status(404).json({ error: 'Cihaz bulunamadi' });
+        }
         const filter = { deviceId: req.params.deviceId };
 
         if (start || end) {
@@ -112,11 +116,17 @@ router.delete('/geofences/:id', auth, async (req, res) => {
     }
 });
 
-router.get('/alerts', auth, async (req, res) => {
+router.get('/alerts', auth, scope.scopeMiddleware, async (req, res) => {
     try {
         const { deviceId, type, severity, acknowledged, limit = 100 } = req.query;
+        const deviceIds = req.tenantDeviceIds;
         const filter = {};
-        if (deviceId) filter.deviceId = deviceId;
+        if (deviceId) {
+            if (deviceIds && !deviceIds.includes(deviceId)) return res.json([]);
+            filter.deviceId = deviceId;
+        } else if (deviceIds) {
+            filter.deviceId = { $in: deviceIds };
+        }
         if (type) filter.type = type;
         if (severity) filter.severity = severity;
         if (acknowledged !== undefined) filter.acknowledged = acknowledged === 'true';

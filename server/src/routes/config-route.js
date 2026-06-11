@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Device = require('../models/Device');
 const auth = require('../middleware/auth');
+const scope = require('../middleware/tenant-scope');
 const requireRole = require('../middleware/require-role');
 
 router.get('/:deviceId', async (req, res) => {
@@ -28,7 +29,7 @@ router.get('/:deviceId', async (req, res) => {
     }
 });
 
-router.put('/:deviceId', auth, requireRole('operator'), async (req, res) => {
+router.put('/:deviceId', auth, scope.scopeMiddleware, requireRole('operator'), async (req, res) => {
     try {
         const { loop_interval_ms, gps_timeout_ms, speed_threshold, wifi_ssid, wifi_pass, gsm_apn } = req.body;
         const metadata = {};
@@ -40,8 +41,9 @@ router.put('/:deviceId', auth, requireRole('operator'), async (req, res) => {
         if (wifi_pass) metadata.wifiPass = wifi_pass;
         if (gsm_apn) metadata.gsmApn = gsm_apn;
 
+        const filter = { deviceId: req.params.deviceId, ...scope.deviceFilter(req) };
         const device = await Device.findOneAndUpdate(
-            { deviceId: req.params.deviceId },
+            filter,
             { $set: { metadata } },
             { new: true }
         );

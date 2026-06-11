@@ -1,11 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const DriverLog = require('../models/DriverLog');
+const Device = require('../models/Device');
 const auth = require('../middleware/auth');
+const scope = require('../middleware/tenant-scope');
 const requireRole = require('../middleware/require-role');
+
+async function checkDeviceAccess(deviceId, req) {
+    if (req.user.isSuperAdmin) return true;
+    const filter = { deviceId };
+    if (req.user.tenantId) filter.tenantId = req.user.tenantId;
+    return !!(await Device.findOne(filter).select('_id').lean());
+}
 
 router.get('/daily/:deviceId', auth, async (req, res) => {
     try {
+        if (!(await checkDeviceAccess(req.params.deviceId, req))) {
+            return res.status(404).json({ error: 'Cihaz bulunamadi' });
+        }
         const { date } = req.query;
         const dayStart = date ? new Date(date) : new Date();
         dayStart.setHours(0, 0, 0, 0);
@@ -35,6 +47,9 @@ router.get('/daily/:deviceId', auth, async (req, res) => {
 
 router.get('/weekly/:deviceId', auth, async (req, res) => {
     try {
+        if (!(await checkDeviceAccess(req.params.deviceId, req))) {
+            return res.status(404).json({ error: 'Cihaz bulunamadi' });
+        }
         const endDate = new Date();
         const startDate = new Date(endDate);
         startDate.setDate(startDate.getDate() - 7);
@@ -52,6 +67,9 @@ router.get('/weekly/:deviceId', auth, async (req, res) => {
 
 router.get('/violations/:deviceId', auth, async (req, res) => {
     try {
+        if (!(await checkDeviceAccess(req.params.deviceId, req))) {
+            return res.status(404).json({ error: 'Cihaz bulunamadi' });
+        }
         const violations = await DriverLog.find({
             deviceId: req.params.deviceId,
             cycleViolation: true

@@ -1,15 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const AnomalyLog = require('../models/AnomalyLog');
+const Device = require('../models/Device');
 const auth = require('../middleware/auth');
+const scope = require('../middleware/tenant-scope');
 const requireRole = require('../middleware/require-role');
 const detector = require('../services/anomaly-detector');
 
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, scope.scopeMiddleware, async (req, res) => {
     try {
         const { deviceId, severity, type, limit = 50, acknowledged } = req.query;
         const filter = {};
-        if (deviceId) filter.deviceId = deviceId;
+        if (deviceId) {
+            if (req.tenantDeviceIds && !req.tenantDeviceIds.includes(deviceId)) return res.json([]);
+            filter.deviceId = deviceId;
+        } else if (req.tenantDeviceIds) {
+            filter.deviceId = { $in: req.tenantDeviceIds };
+        }
         if (severity) filter.severity = severity;
         if (type) filter.type = type;
         if (acknowledged === 'false') filter.acknowledged = false;
@@ -24,17 +31,25 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
-router.get('/stats', auth, async (req, res) => {
+router.get('/stats', auth, scope.scopeMiddleware, async (req, res) => {
     try {
-        const total = await AnomalyLog.countDocuments();
-        const critical = await AnomalyLog.countDocuments({ severity: 'critical', acknowledged: false });
-        const high = await AnomalyLog.countDocuments({ severity: 'high', acknowledged: false });
+        const deviceIds = req.tenantDeviceIds;
+        const matchStage = deviceIds ? { deviceId: { $in: deviceIds } } : {};
+        const total = await AnomalyLog.countDocuments(matchStage);
+        const critical = await AnomalyLog.countDocuments({ ...matchStage, severity: 'critical', acknowledged: false });
+        const high = await AnomalyLog.countDocuments({ ...matchStage, severity: 'high', acknowledged: false });
         const types = await AnomalyLog.aggregate([
+            { $match: matchStage },
             { $group: { _id: '$type', count: { $sum: 1 } } },
             { $sort: { count: -1 } }
         ]);
         const trend = await AnomalyLog.aggregate([
-            { $match: { createdAt: { $gte: new Date(Date.now() - 7 * 86400000) } } },
+            {
+                $match: {
+                    ...matchStage,
+                    createdAt: { $gte: new Date(Date.now() - 7 * 86400000) }
+                }
+            },
             { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
             { $sort: { _id: 1 } }
         ]);

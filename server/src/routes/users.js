@@ -6,10 +6,43 @@ const requireRole = require('../middleware/require-role');
 
 router.get('/', auth, requireRole('admin'), async (req, res) => {
     try {
-        const users = await User.find().select('-password').sort({ createdAt: -1 });
+        const filter = {};
+        if (req.user.tenantId) filter.tenantId = req.user.tenantId;
+        const users = await User.find(filter).select('-password').sort({ createdAt: -1 });
         res.json(users);
     } catch (err) {
         res.status(500).json({ error: 'Kullanicilar listelenemedi' });
+    }
+});
+
+router.post('/', auth, requireRole('admin'), async (req, res) => {
+    try {
+        const { email, password, name, role, phone, permissions } = req.body;
+        if (!email || !password || !name) {
+            return res.status(400).json({ error: 'Email, sifre ve isim zorunludur' });
+        }
+
+        const existing = await User.findOne({ email });
+        if (existing) {
+            return res.status(409).json({ error: 'Bu email zaten kayitli' });
+        }
+
+        const defaultPerms = User.getRolePermissions(role || 'viewer');
+        const user = new User({
+            email, password, name,
+            role: role || 'viewer',
+            phone: phone || '',
+            tenantId: req.user.tenantId || null,
+            permissions: permissions || defaultPerms
+        });
+
+        await user.save();
+        res.status(201).json({
+            message: 'Kullanici olusturuldu',
+            user: { id: user._id, email: user.email, name: user.name, role: user.role }
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Kullanici olusturulamadi' });
     }
 });
 
@@ -45,6 +78,9 @@ router.post('/', auth, requireRole('admin'), async (req, res) => {
 
 router.put('/:id', auth, requireRole('admin'), async (req, res) => {
     try {
+        const filter = { _id: req.params.id };
+        if (req.user.tenantId) filter.tenantId = req.user.tenantId;
+
         const { name, role, phone, isActive, permissions, assignedDevices } = req.body;
         const update = {};
         if (name) update.name = name;
@@ -54,7 +90,7 @@ router.put('/:id', auth, requireRole('admin'), async (req, res) => {
         if (permissions) update.permissions = permissions;
         if (assignedDevices) update.assignedDevices = assignedDevices;
 
-        const user = await User.findByIdAndUpdate(req.params.id, { $set: update }, { new: true }).select('-password');
+        const user = await User.findOneAndUpdate(filter, { $set: update }, { new: true }).select('-password');
         if (!user) return res.status(404).json({ error: 'Kullanici bulunamadi' });
         res.json(user);
     } catch (err) {
@@ -67,7 +103,9 @@ router.delete('/:id', auth, requireRole('admin'), async (req, res) => {
         if (req.params.id === req.user.id) {
             return res.status(400).json({ error: 'Kendinizi silemezsiniz' });
         }
-        await User.findByIdAndDelete(req.params.id);
+        const filter = { _id: req.params.id };
+        if (req.user.tenantId) filter.tenantId = req.user.tenantId;
+        await User.findOneAndDelete(filter);
         res.json({ message: 'Kullanici silindi' });
     } catch (err) {
         res.status(500).json({ error: 'Kullanici silinemedi' });

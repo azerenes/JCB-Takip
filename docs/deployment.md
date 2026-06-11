@@ -6,26 +6,24 @@
 |---------|---------|----------|
 | CPU | 2 çekirdek | 4+ çekirdek |
 | RAM | 4GB | 8GB+ |
-| Disk | 50GB SSD | 100GB+ SSD |
+| Disk | 20GB SSD | 50GB+ SSD |
 | İşletim Sistemi | Ubuntu 22.04 / Debian 12 | Ubuntu 24.04 |
 | Docker | 24+ | 26+ |
 
-## 2. Hızlı Kurulum (Docker Compose)
+## 2. Hızlı Kurulum
 
 ```bash
 # Projeyi klonla
-git clone <repo-url> jcb-tracker
+git clone https://github.com/azerenes/JCB-Takip.git jcb-tracker
 cd jcb-tracker
 
-# .env dosyasını düzenle
-cp server/.env.example server/.env
-nano server/.env
+# Tüm servisleri başlat (MongoDB + EMQX + Node.js + Simülatör)
+docker compose up -d --build
 
-# Tüm servisleri başlat
-docker-compose up -d
+# Servislerin hazır olmasını bekle (15-30sn)
+docker compose ps
 
-# Logları izle
-docker-compose logs -f
+# Web panel: http://sunucu-ip:3000
 ```
 
 ## 3. Servisler
@@ -35,99 +33,128 @@ docker-compose logs -f
 | EMQX | 1883 (MQTT), 8083 (WS), 18083 (Dashboard) | MQTT Broker |
 | Node.js | 3000 | REST API + Web Panel |
 | MongoDB | 27017 | Veritabanı |
+| Simülatör | - | 12 sanal cihaz (opsiyonel) |
 
-## 4. EMQX Dashboard
+## 4. Müşteri Yönetimi (Multi-Tenant)
 
-- URL: http://sunucu-ip:18083
-- Kullanıcı: admin
-- Şifre: public
+Her müşteri kendi verilerine **sadece kendi hesabıyla** erişebilir.
 
-## 5. Web Panel
+### Yeni Müşteri Ekleme
+1. **Müşteri kendi kaydolur:** `http://sunucu-ip:3000/register.html`
+2. **Süper Admin ekler:** Web panel → Süper Admin → Yeni Firma
 
-- URL: http://sunucu-ip:3000
-- Varsayılan admin: admin@jcbtracker.com / admin123
+### Varsayılan Hesaplar
+| Rol | Email | Şifre |
+|-----|-------|-------|
+| Süper Admin | admin@jcbtracker.com | admin123 |
+| Demo Tenant | demo@jcbtracker.com | demo123 |
 
-## 6. ESP32 Firmware Yükleme
+## 5. Cihaz Bağlama
 
-### PlatformIO ile:
-```bash
-cd firmware
-pio run --target upload --environment esp32dev
-pio device monitor
-```
-
-### Konfigürasyon (config.h):
+### ESP32 Konfigürasyonu
 ```cpp
-#define DEVICE_ID           "JCB-001"
-#define DEVICE_API_KEY      "sunucudan_alinan_api_key"
+#define DEVICE_ID           "MUSTERI-001"
+#define DEVICE_API_KEY      ""  // Sunucu otomatik atar
 #define MQTT_BROKER         "mqtt://sunucu-ip"
 #define API_BASE_URL        "http://sunucu-ip:3000/api"
 ```
 
-## 7. Test Simulasyonu
+ESP32 açıldığında:
+1. `/api/device/register` ile kaydolur
+2. API key alır
+3. MQTT üzerinden canlı veri göndermeye başlar
 
-Sunucusuz test için cihaz simülatörünü kullanın:
+### Test İçin Simülatör
+Docker stack içinde **12 sanal cihaz** otomatik çalışır:
 ```bash
-cd tools/device_simulator
-npm install
-DEVICE_COUNT=10 node device_simulator.js
+# Simülatör ayarları (.env dosyası)
+SIM_DEVICE_COUNT=20
+SIM_INTERVAL_MS=5000
 ```
 
-## 8. Veritabanı Yedekleme
+## 6. EMQX Dashboard
+
+- URL: `http://sunucu-ip:18083`
+- Kullanıcı: `admin`
+- Şifre: `public`
+
+## 7. Yönetim
 
 ```bash
-docker exec jcb-mongo mongodump --out /backup/$(date +%Y%m%d)
-docker cp jcb-mongo:/backup/$(date +%Y%m%d) ./backups/
+# Servis durumu
+docker compose ps
+
+# Loglar
+docker compose logs -f server
+docker compose logs -f simulator
+
+# Güncelleme (kod değişikliği sonrası)
+docker compose up -d --build server
+
+# Durdurma
+docker compose down
+
+# Veritabanı yedekleme
+docker exec jcb-mongo mongodump --out /data/backup/$(date +%Y%m%d)
+
+# Tam sıfırlama
+docker compose down -v
+docker compose up -d
 ```
 
-## 9. İzleme
+## 8. Güvenlik Notları
 
-```bash
-# Tüm servis durumu
-docker-compose ps
+- Tüm API istekleri **JWT token** ile korunur
+- Her müşteri (tenant) sadece kendi cihazlarını görür
+- Süper Admin tüm tenant'ları yönetebilir
+- Cihaz-sunucu iletişimi **apiKey** ile doğrulanır
+- Rate limiting: 300 istek/15dk (API), 20 deneme/15dk (login)
+- HTTPS zorunludur (production için reverse proxy önerilir: Nginx/Caddy)
 
-# Kaynak kullanımı
-docker stats
+## 9. Production Deployment
 
-# EMQX istatistik
-docker exec jcb-emqx emqx_ctl stats
+Production için önerilen mimari:
+```
+Internet → Nginx (SSL) → Node.js (3000)
+                        → EMQX (1883 MQTT, 8883 MQTTS)
+                        → MongoDB (27017, auth enabled)
+```
 
-# MongoDB sorgu profili
-docker exec jcb-mongo mongosh --eval "db.setProfilingLevel(1)"
+Nginx ile SSL yapılandırması:
+```nginx
+server {
+    listen 443 ssl;
+    server_name jcb-sunucu.com;
+
+    ssl_certificate /etc/letsencrypt/live/.../fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/.../privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
 ```
 
 ## 10. Sorun Giderme
 
-### ESP32 Bağlanamıyorsa
+### Cihaz Bağlanamıyorsa
 ```bash
-# GSM sinyali kontrol
-AT+CSQ
+# EMQX bağlantılarını kontrol et
+docker exec jcb-emqx emqx_ctl clients list
 
-# MQTT bağlantı testi
-AT+MQTTCONN="tcp://sunucu-ip",1883,"JCB-001",60,"",""
-
-# DNS çözümleme
-AT+CDNSGIP="sunucu-adres.com"
+# MQTT test mesajı gönder
+docker exec jcb-emqx emqx_ctl publish topic "test" '{"msg":"hello"}'
 ```
 
 ### Sunucu Logları
 ```bash
-docker-compose logs -f --tail=100 server
-docker-compose logs -f --tail=100 emqx
+docker compose logs -f --tail=100 server
+docker compose logs -f --tail=100 emqx
+docker compose logs -f --tail=50 simulator
 ```
-
-### MongoDB Performans
-```javascript
-// Veritabanı mongo shell içinde
-db.currentOp()
-db.LocationLog.getIndexes()
-db.LocationLog.find().explain("executionStats")
-```
-
-## 11. Güvenlik
-
-- Tüm API istekleri HTTPS üzerinden yapılmalıdır
-- EMQX MQTT TLS ile yapılandırılmalıdır
-- MongoDB authentication etkinleştirilmelidir
-- API key'ler düzenli olarak rotasyon yapılmalıdır
-- Web panel için rate limiting uygulanmalıdır

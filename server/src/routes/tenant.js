@@ -29,30 +29,13 @@ router.get('/limits', auth, tenantMw, (req, res) => {
     });
 });
 
-router.get('/register', async (req, res) => {
-    res.json({
-        plans: [
-            { id: 'trial', name: 'Deneme', deviceLimit: 5, userLimit: 3, price: 0, duration: '30 gun' },
-            { id: 'basic', name: 'Basit', deviceLimit: 20, userLimit: 10, price: 299, duration: 'aylik' },
-            { id: 'professional', name: 'Profesyonel', deviceLimit: 100, userLimit: 50, price: 999, duration: 'aylik' },
-            { id: 'enterprise', name: 'Kurumsal', deviceLimit: 9999, userLimit: 9999, price: 0, duration: 'iletisim' }
-        ]
-    });
-});
-
 router.post('/register', async (req, res) => {
-    const { companyName, contactEmail, password, plan = 'trial' } = req.body;
+    const { companyName, contactEmail, password } = req.body;
     const slug = companyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 30);
 
     if (await Tenant.findOne({ slug })) return res.status(400).json({ error: 'Bu firma adi zaten kayitli' });
 
-    const planConfig = {
-        trial: { deviceLimit: 5, userLimit: 3, durationDays: 30 },
-        basic: { deviceLimit: 20, userLimit: 10, durationDays: 30 },
-        professional: { deviceLimit: 100, userLimit: 50, durationDays: 30 },
-        enterprise: { deviceLimit: 9999, userLimit: 9999, durationDays: 365 }
-    };
-    const cfg = planConfig[plan] || planConfig.trial;
+    const cfg = { deviceLimit: 50, userLimit: 10, durationDays: 30 };
 
     const tenant = await Tenant.create({
         companyName, slug, contactEmail,

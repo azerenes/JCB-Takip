@@ -7,23 +7,16 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .register-body { background: var(--bg); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
-        .register-card { background: var(--card); border-radius: 20px; padding: 48px; width: 520px; max-width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+        .register-card { background: var(--card); border-radius: 20px; padding: 48px; width: 480px; max-width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
         .register-card h1 { font-size: 28px; margin-bottom: 4px; }
         .register-card .subtitle { color: var(--text-secondary); font-size: 14px; margin-bottom: 32px; }
         .register-card .form-group { margin-bottom: 20px; }
         .register-card label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
-        .register-card input, .register-card select { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; transition: border-color 0.2s; }
-        .register-card input:focus, .register-card select:focus { outline: none; border-color: var(--primary); }
-        .register-card .plan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
-        .plan-card { border: 2px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; }
-        .plan-card:hover { border-color: var(--primary); }
-        .plan-card.selected { border-color: var(--primary); background: #eff6ff; }
-        .plan-card .plan-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
-        .plan-card .plan-price { font-size: 22px; font-weight: 800; color: var(--primary); }
-        .plan-card .plan-price span { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
-        .plan-card .plan-desc { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+        .register-card input { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; transition: border-color 0.2s; }
+        .register-card input:focus { outline: none; border-color: var(--primary); }
         .register-card .btn-primary { width: 100%; padding: 14px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; }
         .register-card .btn-primary:hover { background: var(--primary-dark); }
+        .register-card .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
         .register-card .login-link { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-secondary); }
         .register-card .login-link a { color: var(--primary); text-decoration: none; font-weight: 600; }
         .register-card .error-msg { background: #fee2e2; color: var(--danger); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; display: none; }
@@ -36,43 +29,22 @@
 <body class="register-body">
     <div class="register-card">
         <h1>JCB Tracker'a Katılın</h1>
-        <p class="subtitle">İş makinelerinizi takip etmeye hemen başlayın</p>
+        <p class="subtitle">Size özel bir hesap oluşturalım</p>
         <div id="registerError" class="error-msg"></div>
         <div id="registerSuccess" class="success-msg"></div>
 
         <div id="registerForm">
             <div class="form-group">
                 <label>Firma Adı</label>
-                <input type="text" id="regCompany" placeholder="Örn: Yılmaz İnşaat" />
+                <input type="text" id="regCompany" placeholder="Firma adınız" />
             </div>
             <div class="form-group">
                 <label>E-posta</label>
-                <input type="email" id="regEmail" placeholder="ornek@firma.com" />
+                <input type="email" id="regEmail" placeholder="E-posta adresiniz" />
             </div>
             <div class="form-group">
                 <label>Şifre</label>
                 <input type="password" id="regPassword" placeholder="En az 6 karakter" />
-            </div>
-
-            <div class="form-group">
-                <label>Plan Seçin</label>
-                <div class="plan-grid" id="planGrid">
-                    <div class="plan-card selected" data-plan="trial" onclick="selectPlan('trial')">
-                        <div class="plan-name">Deneme</div>
-                        <div class="plan-price">0<span>/30g</span></div>
-                        <div class="plan-desc">5 cihaz</div>
-                    </div>
-                    <div class="plan-card" data-plan="basic" onclick="selectPlan('basic')">
-                        <div class="plan-name">Başlangıç</div>
-                        <div class="plan-price">₺299<span>/ay</span></div>
-                        <div class="plan-desc">20 cihaz</div>
-                    </div>
-                    <div class="plan-card" data-plan="professional" onclick="selectPlan('professional')">
-                        <div class="plan-name">Pro</div>
-                        <div class="plan-price">₺999<span>/ay</span></div>
-                        <div class="plan-desc">100 cihaz</div>
-                    </div>
-                </div>
             </div>
 
             <button onclick="register()" class="btn-primary" id="regBtn">Kayıt Ol</button>
@@ -83,14 +55,6 @@
     </div>
 
     <script>
-        let selectedPlan = 'trial';
-
-        function selectPlan(plan) {
-            selectedPlan = plan;
-            document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
-            document.querySelector(`.plan-card[data-plan="${plan}"]`).classList.add('selected');
-        }
-
         async function register() {
             const company = document.getElementById('regCompany').value.trim();
             const email = document.getElementById('regEmail').value.trim();
@@ -105,13 +69,11 @@
 
             if (!company || !email || !password) {
                 errDiv.textContent = 'Lütfen tüm alanları doldurun';
-                errDiv.style.display = 'block';
-                return;
+                errDiv.style.display = 'block'; return;
             }
             if (password.length < 6) {
                 errDiv.textContent = 'Şifre en az 6 karakter olmalıdır';
-                errDiv.style.display = 'block';
-                return;
+                errDiv.style.display = 'block'; return;
             }
 
             btn.disabled = true;
@@ -121,7 +83,7 @@
                 const res = await fetch('/api/tenant/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ companyName: company, contactEmail: email, password, plan: selectedPlan })
+                    body: JSON.stringify({ companyName: company, contactEmail: email, password })
                 });
                 const data = await res.json();
 
@@ -135,9 +97,9 @@
 
                 formDiv.style.display = 'none';
                 successDiv.style.display = 'block';
-                successDiv.innerHTML = `<strong>✅ Kayıt Başarılı!</strong>
-                    <p style="margin:12px 0">Hesabınız oluşturuldu. Giriş yaparak hemen başlayabilirsiniz.</p>
-                    <a href="/app.html" style="display:inline-block;padding:12px 32px;background:var(--primary);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;margin-top:8px">Giriş Yap</a>`;
+                successDiv.innerHTML = '<strong>Hesabınız Oluşturuldu</strong>' +
+                    '<p style="margin:12px 0">Size özel hesabınız hazır. Giriş yaparak hemen başlayabilirsiniz.</p>' +
+                    '<a href="/app.html" style="display:inline-block;padding:12px 32px;background:var(--primary);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;margin-top:8px">Giriş Yap</a>';
             } catch (err) {
                 errDiv.textContent = 'Sunucuya bağlanılamadı';
                 errDiv.style.display = 'block';

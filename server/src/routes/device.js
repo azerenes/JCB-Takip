@@ -3,6 +3,7 @@ const router = express.Router();
 const Device = require('../models/Device');
 const LocationLog = require('../models/LocationLog');
 const auth = require('../middleware/auth');
+const scope = require('../middleware/tenant-scope');
 const { v4: uuidv4 } = require('uuid');
 
 router.post('/register', async (req, res) => {
@@ -14,7 +15,7 @@ router.post('/register', async (req, res) => {
 
         const existing = await Device.findOne({ deviceId });
         if (existing) {
-            return res.status(409).json({ error: 'Bu deviceId zaten kayitli', device: existing });
+            return res.status(409).json({ error: 'Bu deviceId zaten kayitli' });
         }
 
         const device = new Device({
@@ -44,10 +45,10 @@ router.post('/register', async (req, res) => {
     }
 });
 
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, scope.scopeMiddleware, async (req, res) => {
     try {
         const { group, status, search } = req.query;
-        const filter = {};
+        const filter = scope.deviceFilter(req);
         if (group) filter.group = group;
         if (status) filter.status = status;
         if (search) {
@@ -66,9 +67,10 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
-router.get('/:deviceId', auth, async (req, res) => {
+router.get('/:deviceId', auth, scope.scopeMiddleware, async (req, res) => {
     try {
-        const device = await Device.findOne({ deviceId: req.params.deviceId });
+        const filter = { deviceId: req.params.deviceId, ...scope.deviceFilter(req) };
+        const device = await Device.findOne(filter);
         if (!device) return res.status(404).json({ error: 'Cihaz bulunamadi' });
 
         const last24h = await LocationLog.countDocuments({
@@ -82,8 +84,9 @@ router.get('/:deviceId', auth, async (req, res) => {
     }
 });
 
-router.put('/:deviceId', auth, async (req, res) => {
+router.put('/:deviceId', auth, scope.scopeMiddleware, async (req, res) => {
     try {
+        const filter = { deviceId: req.params.deviceId, ...scope.deviceFilter(req) };
         const { name, plate, group, status, metadata } = req.body;
         const update = {};
         if (name) update.name = name;
@@ -93,7 +96,7 @@ router.put('/:deviceId', auth, async (req, res) => {
         if (metadata) update.metadata = metadata;
 
         const device = await Device.findOneAndUpdate(
-            { deviceId: req.params.deviceId },
+            filter,
             { $set: update },
             { new: true }
         );
@@ -105,9 +108,10 @@ router.put('/:deviceId', auth, async (req, res) => {
     }
 });
 
-router.delete('/:deviceId', auth, async (req, res) => {
+router.delete('/:deviceId', auth, scope.scopeMiddleware, async (req, res) => {
     try {
-        const device = await Device.findOneAndDelete({ deviceId: req.params.deviceId });
+        const filter = { deviceId: req.params.deviceId, ...scope.deviceFilter(req) };
+        const device = await Device.findOneAndDelete(filter);
         if (!device) return res.status(404).json({ error: 'Cihaz bulunamadi' });
 
         await LocationLog.deleteMany({ deviceId: req.params.deviceId });

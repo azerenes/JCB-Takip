@@ -52,10 +52,12 @@ router.delete('/tenants/:id', sa, async (req, res) => {
 });
 
 router.get('/tenants/:id/stats', sa, async (req, res) => {
+    const tenantDevices = await Device.find({ tenantId: req.params.id }).select('deviceId').lean();
+    const deviceIds = tenantDevices.map(d => d.deviceId);
     const [deviceCount, userCount, alertCount] = await Promise.all([
         Device.countDocuments({ tenantId: req.params.id }),
         User.countDocuments({ tenantId: req.params.id }),
-        require('../models/Alert').countDocuments({ tenantId: req.params.id })
+        deviceIds.length ? require('../models/Alert').countDocuments({ deviceId: { $in: deviceIds } }) : 0
     ]);
     res.json({ deviceCount, userCount, alertCount });
 });

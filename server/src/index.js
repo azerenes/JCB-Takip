@@ -62,7 +62,8 @@ const User = require('./models/User');
 const Tenant = require('./models/Tenant');
 async function seedAdmin() {
     try {
-        let superAdmin = await User.findOne({ isSuperAdmin: true });
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@jcbtracker.com';
+        let superAdmin = await User.findOne({ email: adminEmail });
         if (!superAdmin) {
             superAdmin = await User.create({
                 email: process.env.ADMIN_EMAIL || 'admin@jcbtracker.com',

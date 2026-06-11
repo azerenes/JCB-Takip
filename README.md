@@ -99,55 +99,97 @@ Normal Çalışma (İnternet Var):
 
 ---
 
-## 🚀 Hızlı Başlangıç
+## 🚀 Kurulum
 
-### 1. Sunucuyu Başlatın
+### Gereksinimler
+- **Docker Desktop** (Windows) veya **Docker Compose** (Linux) — [kurulum rehberi](https://docs.docker.com/get-docker/)
+- Minimum 2GB RAM, 10GB disk (önerilen: 4GB RAM, 20GB SSD)
 
-```bash
-# Tüm stack'i tek komutla başlat
-docker-compose up -d
-
-# Servislerin sağlıklı çalıştığını doğrula
-docker-compose ps
-
-# Logları izle
-docker-compose logs -f server
-```
-
-| Servis | Port | Açıklama |
-|--------|------|----------|
-| 🌐 Web Panel | `localhost:3000` | Ana arayüz |
-| 📡 MQTT | `localhost:1883` | Cihaz bağlantısı |
-| 🔌 MQTT WS | `localhost:8083` | WebSocket MQTT |
-| 📊 EMQX Dashboard | `localhost:18083` | Broker yönetimi |
-| 🗄️ MongoDB | `localhost:27017` | Veritabanı |
-
-### 2. ESP32'yi Hazırlayın
+### 1. Projeyi İndirin
 
 ```bash
-# PlatformIO ile firmware'i yükle
-cd firmware
-pio run --target upload --environment esp32dev
-
-# Seri monitör ile çıktıları izle
-pio device monitor
+git clone https://github.com/azerenes/JCB-Takip.git jcb-tracker
+cd jcb-tracker
 ```
 
-### 3. Test Simülasyonu
-
-Sunucuyu donanım olmadan test etmek için:
+### 2. Sunucuyu Başlatın
 
 ```bash
-cd tools/device_simulator
-npm install
-DEVICE_COUNT=10 npm start
+# Tüm stack'i başlat (MongoDB + EMQX + Node.js + Simülatör)
+docker compose up -d --build
+
+# Servislerin durumunu kontrol et
+docker compose ps
+
+# Sunucu loglarını izle
+docker compose logs -f server
 ```
 
-**Web Panel:** http://localhost:3000
+### 3. Web Paneline Erişin
 
-| Rol | Email | Şifre |
-|-----|-------|-------|
-| 📋 Admin | `admin@jcbtracker.com` | `admin123` |
+| Adres | Açıklama |
+|-------|----------|
+| `http://localhost:3000` | Ana sayfa (landing page) |
+| `http://localhost:3000/app.html` | Giriş yap → Harita paneli |
+| `http://localhost:3000/register.html` | Yeni firma kaydı |
+| `http://localhost:18083` | EMQX MQTT Dashboard (`admin` / `public`) |
+
+| Varsayılan Hesap | Email | Şifre |
+|-----------------|-------|-------|
+| Süper Admin | `admin@jcbtracker.com` | `admin123` |
+
+### 4. Cihaz Simülasyonu (Test İçin)
+
+Docker stack içinde **12 adet sanal cihaz** otomatik çalışır:
+- MQTT üzerinden 10sn aralıkla canlı veri gönderir
+- Cihazlar haritada görünür, ELD ve anomali verisi üretir
+- `SIM-001` ... `SIM-012` kodlu cihazlar
+- Türkiye geneline yayılmış, 6 farklı grup
+
+Özelleştirmek için `.env` dosyası oluşturun:
+```bash
+SIM_DEVICE_COUNT=20    # Cihaz sayısı
+SIM_INTERVAL_MS=5000    # Veri gönderme aralığı (ms)
+```
+
+### 5. Gerçek Cihaz Bağlama
+
+Her müşteri için:
+1. **Web panelden** firma kaydı oluşturun (veya müşteri kaydolsun)
+2. **ESP32 firmware**'inde `config.h` dosyasını düzenleyin:
+   ```c
+   #define MQTT_BROKER "sizin-sunucu-adresiniz"
+   #define MQTT_PORT 1883
+   ```
+3. Cihaz açıldığında otomatik kayıt olur (`/api/device/register`)
+4. Haritada görünmeye başlar
+
+### 6. Önemli Ortam Değişkenleri
+
+| Değişken | Varsayılan | Açıklama |
+|----------|-----------|----------|
+| `JWT_SECRET` | rastgele | Token şifreleme anahtarı |
+| `ADMIN_EMAIL` | admin@jcbtracker.com | Süper admin e-posta |
+| `ADMIN_PASSWORD` | admin123 | Süper admin şifre |
+| `SIM_DEVICE_COUNT` | 12 | Simülatör cihaz sayısı |
+| `SIM_INTERVAL_MS` | 10000 | Simülatör gönderme aralığı |
+
+### Komutlar
+
+```bash
+# Sadece sunucuyu yeniden başlat (kod değişikliği sonrası)
+docker compose up -d --build server
+
+# Tüm servisleri durdur
+docker compose down
+
+# Logları temizle
+docker compose logs --tail=100 -f
+
+# MongoDB verisini sıfırla
+docker compose down -v
+docker compose up -d
+```
 
 ---
 
@@ -346,7 +388,7 @@ cd server && npm install
 npm run dev
 
 # Docker ile başlat
-docker-compose up -d --build
+docker compose up -d --build
 
 # EMQX shell
 docker exec -it jcb-emqx sh
@@ -414,7 +456,7 @@ Bu proje MIT lisansı ile lisanslanmıştır. Detaylar için `LICENSE` dosyasın
 
 ```bash
 # Start the server stack
-docker-compose up -d
+docker compose up -d
 
 # Load firmware to ESP32
 cd firmware && pio run --target upload
