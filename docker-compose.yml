@@ -5,6 +5,7 @@ networks:
 volumes:
   mongo-data:
   emqx-data:
+  simulator-state:
 
 services:
   # ===== MQTT Broker =====
@@ -70,5 +71,27 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+    networks:
+      - jcb-net
+
+  # ===== Cihaz Simulator =====
+  simulator:
+    build:
+      context: ./simulator
+      dockerfile: Dockerfile
+    container_name: jcb-simulator
+    restart: unless-stopped
+    environment:
+      MQTT_BROKER: mqtt://emqx:1883
+      API_URL: http://server:3000
+      DEVICE_COUNT: ${SIM_DEVICE_COUNT:-12}
+      INTERVAL_MS: ${SIM_INTERVAL_MS:-10000}
+      AUTH_TOKEN: ""
+      TENANT_ID: ""
+    depends_on:
+      emqx:
+        condition: service_started
+      server:
+        condition: service_started
     networks:
       - jcb-net
