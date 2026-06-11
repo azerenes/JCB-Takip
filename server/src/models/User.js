@@ -3,6 +3,15 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
+    tenantId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Tenant',
+        index: true
+    },
+    isSuperAdmin: {
+        type: Boolean,
+        default: false
+    },
     email: {
         type: String,
         required: true,

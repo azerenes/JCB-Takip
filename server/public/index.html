@@ -3,86 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCB Tracker - Canlı Harita</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>JCB Tracker - İş Makineleri Takip Sistemi</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <!-- Login Modal -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>JCB Tracker'a Hoş Geldiniz</h2>
-            <p style="color:var(--gray);margin-bottom:20px">Devam etmek için giriş yapın</p>
-            <div id="loginError" style="color:var(--danger);margin-bottom:12px;font-size:13px"></div>
-            <input type="email" id="loginEmail" placeholder="E-posta" required>
-            <input type="password" id="loginPassword" placeholder="Şifre" required>
-            <button onclick="login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value)">Giriş Yap</button>
-            <p style="margin-top:12px;font-size:12px;color:var(--gray)">Demo: admin@jcbtracker.com / admin123</p>
-        </div>
-    </div>
-
-    <!-- Bildirim Konteyneri -->
-    <div id="notificationContainer" style="position:fixed;top:70px;right:20px;z-index:9999"></div>
-
-    <nav class="navbar">
-        <div class="nav-brand">JCB Tracker</div>
-        <div style="flex:1;display:flex;align-items:center;gap:16px">
-            <div class="nav-links">
-                <a href="index.html" class="active">Harita</a>
-                <a href="dashboard.html">Dashboard</a>
-                <a href="eld.html">ELD</a>
-                <a href="anomaly.html">Anomali</a>
-                <a href="reports.html">Raporlar</a>
-                <a href="#" id="usersLink" class="role-admin" style="display:none">Kullanıcılar</a>
-                <a href="#" id="otaLink" class="role-operator" style="display:none">OTA</a>
-                <a href="#" id="logoutBtn">Çıkış</a>
+<body class="landing-body">
+    <nav class="landing-nav">
+        <div class="landing-nav-inner">
+            <div class="landing-brand">JCB Tracker</div>
+            <div class="landing-nav-links">
+                <a href="#features">Özellikler</a>
+                <a href="#pricing">Fiyatlar</a>
+                <a href="#contact">İletişim</a>
+                <a href="/app.html" class="landing-btn">Giriş Yap</a>
             </div>
         </div>
-        <span id="userName" style="font-size:12px;color:var(--gray);margin-left:auto"></span>
     </nav>
 
-    <div class="main-container">
-        <aside class="sidebar" id="deviceList">
-            <div class="sidebar-header">
-                <h3>Cihazlar</h3>
-                <div class="filter-group">
-                    <select id="groupFilter">
-                        <option value="">Tüm Gruplar</option>
-                    </select>
-                    <input type="text" id="searchDevice" placeholder="Ara..." />
-                </div>
+    <section class="landing-hero">
+        <div class="landing-hero-content">
+            <h1>İş Makineleriniz<br><span>Gerçek Zamanlı</span> Takip Altında</h1>
+            <p>JCB ve tüm iş makineleriniz için GPS takip, yakıt analizi, ELD logbook ve AI destekli anomali tespiti.</p>
+            <div class="landing-hero-buttons">
+                <a href="/app.html" class="landing-btn landing-btn-primary">Hemen Dene</a>
+                <a href="#features" class="landing-btn landing-btn-secondary">Detaylı Bilgi</a>
             </div>
-            <div class="device-items" id="deviceItems"></div>
-        </aside>
+        </div>
+        <div class="landing-hero-visual">
+            <div class="hero-card hero-card-1">📍 250+ Cihaz</div>
+            <div class="hero-card hero-card-2">🛡️ AI Anomali</div>
+            <div class="hero-card hero-card-3">📊 ELD Logbook</div>
+        </div>
+    </section>
 
-        <main class="map-container">
-            <div id="map"></div>
-        </main>
-
-        <aside class="info-panel" id="infoPanel">
-            <div class="info-header">
-                <h3 id="infoTitle">Cihaz Detayı</h3>
-                <button onclick="closeInfo()">×</button>
+    <section id="features" class="landing-section">
+        <h2>Neler Sunuyoruz</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📍</div>
+                <h3>Canlı GPS Takip</h3>
+                <p>Harita üzerinde tüm araçlarınızı anlık görün, geçmiş rotaları inceleyin.</p>
             </div>
-            <div id="infoContent" class="info-content">
-                <p>Haritada bir cihaz seçin</p>
+            <div class="feature-card">
+                <div class="feature-icon">⛽</div>
+                <h3>Yakıt Takibi</h3>
+                <p>CAN-bus üzerinden gerçek yakıt seviyesi, hırsızlık tespiti ve tüketim analizi.</p>
             </div>
-        </aside>
-    </div>
+            <div class="feature-card">
+                <div class="feature-icon">🧠</div>
+                <h3>AI Anomali Tespiti</h3>
+                <p>6 farklı dedektör ile yakıt hırsızlığı, rota sapması, aşırı rölanti ve daha fazlası.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📋</div>
+                <h3>ELD Logbook</h3>
+                <p>Sürücü çalışma saatleri, dinlenme süreleri, yasal uyumluluk raporları.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔧</div>
+                <h3>OTA Güncelleme</h3>
+                <p>ESP32 donanım yazılımını uzaktan güncelleyin, bakım için sahaya gitmeyin.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Detaylı Raporlar</h3>
+                <p>CSV, PDF, özet raporlar. Tüm veriler tek panelde.</p>
+            </div>
+        </div>
+    </section>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="app.js"></script>
-    <script>
-        document.getElementById('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
-        document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginModal').querySelector('button').click(); });
+    <section id="pricing" class="landing-section landing-pricing">
+        <h2>Fiyatlandırma</h2>
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <h3>Deneme</h3>
+                <div class="pricing-price">Ücretsiz</div>
+                <p>30 gün, 5 cihaz</p>
+                <ul>
+                    <li>Canlı GPS Takip</li>
+                    <li>Temel Raporlar</li>
+                    <li>1 Kullanıcı</li>
+                </ul>
+                <a href="/app.html" class="landing-btn landing-btn-primary">Başla</a>
+            </div>
+            <div class="pricing-card pricing-featured">
+                <h3>Profesyonel</h3>
+                <div class="pricing-price">₺999<span>/ay</span></div>
+                <p>100 cihaza kadar</p>
+                <ul>
+                    <li>Tüm Özellikler</li>
+                    <li>AI Anomali Tespiti</li>
+                    <li>ELD Logbook</li>
+                    <li>10 Kullanıcı</li>
+                    <li>Öncelikli Destek</li>
+                </ul>
+                <a href="/app.html" class="landing-btn landing-btn-primary">Satın Al</a>
+            </div>
+            <div class="pricing-card">
+                <h3>Kurumsal</h3>
+                <div class="pricing-price">Özel</div>
+                <p>Sınırsız cihaz</p>
+                <ul>
+                    <li>Beyaz Etiket</li>
+                    <li>Özel Entegrasyon</li>
+                    <li>Sınırsız Kullanıcı</li>
+                    <li>7/24 Destek</li>
+                    <li>Saha Kurulumu</li>
+                </ul>
+                <a href="#contact" class="landing-btn landing-btn-secondary">İletişim</a>
+            </div>
+        </div>
+    </section>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth().then(authed => {
-                if (!authed) return;
-                initPage();
-            });
-        });
-    </script>
+    <section id="contact" class="landing-section">
+        <h2>İletişim</h2>
+        <p style="color:var(--text-secondary);margin-bottom:30px;text-align:center">Satış ve destek için bize ulaşın</p>
+        <div style="display:flex;justify-content:center;gap:40px;flex-wrap:wrap">
+            <div style="text-align:center"><div style="font-size:28px;margin-bottom:8px">📧</div><strong>info@jcbtracker.com</strong></div>
+            <div style="text-align:center"><div style="font-size:28px;margin-bottom:8px">📞</div><strong>+90 (555) 123 45 67</strong></div>
+            <div style="text-align:center"><div style="font-size:28px;margin-bottom:8px">📍</div><strong>İstanbul, Türkiye</strong></div>
+        </div>
+    </section>
+
+    <footer class="landing-footer">
+        <p>&copy; 2026 JCB Tracker. Tüm hakları saklıdır.</p>
+    </footer>
 </body>
 </html>

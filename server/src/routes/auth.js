@@ -54,6 +54,8 @@ router.get('/me', auth, async (req, res) => {
         email: req.user.email,
         name: req.user.name,
         role: req.user.role,
+        isSuperAdmin: req.user.isSuperAdmin || false,
+        tenantId: req.user.tenantId || null,
         permissions: req.user.permissions,
         notificationPreferences: req.user.notificationPreferences,
         lastLogin: req.user.lastLogin

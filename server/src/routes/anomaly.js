@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const AnomalyLog = require('../models/AnomalyLog');
 const auth = require('../middleware/auth');
+const requireRole = require('../middleware/require-role');
 const detector = require('../services/anomaly-detector');
 
 router.get('/', auth, async (req, res) => {

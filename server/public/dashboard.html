@@ -8,12 +8,16 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="notificationContainer" style="position:fixed;top:70px;right:20px;z-index:9999"></div>
     <nav class="navbar">
-        <div class="nav-brand">🚜 JCB Tracker</div>
+        <div class="nav-brand">JCB Tracker</div>
         <div class="nav-links">
-            <a href="index.html">Harita</a>
+            <a href="app.html">Harita</a>
             <a href="dashboard.html" class="active">Dashboard</a>
+            <a href="eld.html">ELD</a>
+            <a href="anomaly.html">Anomali</a>
             <a href="reports.html">Raporlar</a>
+            <span id="userName" style="font-size:12px;color:var(--text-secondary);margin:0 8px"></span>
             <a href="#" id="logoutBtn">Çıkış</a>
         </div>
     </nav>

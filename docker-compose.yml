@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   jcb-net:
     driver: bridge
@@ -24,8 +22,6 @@ services:
       - "8083:8083"
       - "18083:18083"
     volumes:
-      - ./mqtt-broker/emqx.conf:/opt/emqx/etc/emqx.conf:ro
-      - ./mqtt-broker/acl.conf:/opt/emqx/etc/acl.conf:ro
       - emqx-data:/opt/emqx/data
     networks:
       - jcb-net
@@ -72,8 +68,6 @@ services:
     volumes:
       - ./server/exports:/app/exports
     depends_on:
-      emqx:
-        condition: service_healthy
       mongo:
         condition: service_healthy
     networks:

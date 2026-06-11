@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const deviceSchema = new mongoose.Schema({
+    tenantId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Tenant',
+        required: true,
+        index: true
+    },
     deviceId: {
         type: String,
         required: true,
@@ -54,7 +60,8 @@ const deviceSchema = new mongoose.Schema({
     toJSON: { virtuals: true }
 });
 
-deviceSchema.index({ group: 1, status: 1 });
-deviceSchema.index({ 'lastLocation.updatedAt': -1 });
+deviceSchema.index({ tenantId: 1, deviceId: 1 });
+deviceSchema.index({ tenantId: 1, group: 1, status: 1 });
+deviceSchema.index({ tenantId: 1, 'lastLocation.updatedAt': -1 });
 
 module.exports = mongoose.model('Device', deviceSchema);

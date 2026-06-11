@@ -6,6 +6,8 @@ const path = require('path');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const config = require('./config');
 const bcrypt = require('bcryptjs');
 
@@ -28,9 +30,16 @@ const io = new Server(server, {
     cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
+
+// Rate limiting
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false, message: { error: 'Cok fazla istek, lutfen bekleyin' } });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'Cok fazla giris denemesi' } });
+app.use('/api/', apiLimiter);
+app.use('/api/auth/login', authLimiter);
 
 // Auth middleware
 const auth = require('./middleware/auth');
@@ -45,25 +54,45 @@ app.use('/api/panel', require('./routes/panel'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/eld', require('./routes/eld'));
 app.use('/api/anomaly', require('./routes/anomaly'));
+app.use('/api/superadmin', require('./routes/superadmin'));
+app.use('/api/tenant', require('./routes/tenant'));
 
 // Admin seeding
 const User = require('./models/User');
+const Tenant = require('./models/Tenant');
 async function seedAdmin() {
     try {
-        const existing = await User.findOne({ email: config.smtp.from || 'admin@jcbtracker.com' });
-        if (!existing) {
-            const admin = new User({
+        let superAdmin = await User.findOne({ isSuperAdmin: true });
+        if (!superAdmin) {
+            superAdmin = await User.create({
                 email: process.env.ADMIN_EMAIL || 'admin@jcbtracker.com',
                 password: process.env.ADMIN_PASSWORD || 'admin123',
-                name: 'Admin',
+                name: 'Super Admin',
                 role: 'admin',
-                permissions: {
-                    canManageDevices: true, canViewReports: true, canExportData: true,
-                    canManageUsers: true, canUpdateFirmware: true, canConfigureAlerts: true
-                }
+                isSuperAdmin: true,
+                permissions: { canManageDevices: true, canViewReports: true, canExportData: true, canManageUsers: true, canUpdateFirmware: true, canConfigureAlerts: true }
             });
-            await admin.save();
-            console.log(`[Seed] Admin kullanici olusturuldu: ${admin.email}`);
+            console.log(`[Seed] Super Admin olusturuldu: ${superAdmin.email}`);
+        }
+
+        const demoSlug = 'demo-sirket';
+        let demoTenant = await Tenant.findOne({ slug: demoSlug });
+        if (!demoTenant) {
+            demoTenant = await Tenant.create({
+                companyName: 'Demo Sirket',
+                slug: demoSlug,
+                contactEmail: 'demo@jcbtracker.com',
+                license: { type: 'trial', deviceLimit: 10, userLimit: 5, activatedAt: new Date(), expiresAt: new Date(Date.now() + 60 * 86400000) }
+            });
+            const demoUser = await User.create({
+                tenantId: demoTenant._id,
+                email: 'demo@jcbtracker.com',
+                password: 'demo123',
+                name: 'Demo Kullanici',
+                role: 'admin',
+                permissions: { canManageDevices: true, canViewReports: true, canExportData: true, canManageUsers: true, canUpdateFirmware: true, canConfigureAlerts: true }
+            });
+            console.log(`[Seed] Demo tenant olusturuldu: ${demoTenant.companyName}`);
         }
     } catch (err) {
         console.error('[Seed] Admin olusturulamadi:', err.message);
