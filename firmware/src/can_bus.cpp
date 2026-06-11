@@ -42,3 +42,41 @@ uint32_t can_bus_read_hours() {
     }
     return 0;
 }
+
+float can_bus_read_fuel() {
+    if (digitalRead(CAN_INT_PIN) == LOW) {
+        long unsigned int rxId;
+        unsigned char len = 0;
+        unsigned char rxBuf[8];
+        CAN.readMsgBuf(&rxId, &len, rxBuf);
+
+        if ((rxId & 0x00FFFF00) == (PGN_FUEL_LEVEL << 8)) {
+            float level = (rxBuf[0] * 100.0f) / 255.0f;
+            Serial.printf("[CAN] Yakit: %.1f%%\n", level);
+            return level;
+        }
+    }
+    return -1.0f;
+}
+
+bool can_bus_read_vin(char *vin, size_t max_len) {
+    if (digitalRead(CAN_INT_PIN) == LOW) {
+        long unsigned int rxId;
+        unsigned char len = 0;
+        unsigned char rxBuf[8];
+        CAN.readMsgBuf(&rxId, &len, rxBuf);
+
+        if ((rxId & 0x00FFFF00) == (PGN_VIN << 8)) {
+            size_t copy_len = min((size_t)len, max_len - 1);
+            memcpy(vin, rxBuf, copy_len);
+            vin[copy_len] = '\0';
+            // Trim non-printable
+            for (size_t i = 0; i < copy_len; i++) {
+                if (vin[i] < 32) vin[i] = ' ';
+            }
+            Serial.printf("[CAN] VIN: %s\n", vin);
+            return true;
+        }
+    }
+    return false;
+}

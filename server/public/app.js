@@ -1,23 +1,23 @@
 // JCB Tracker - Web Panel Uygulamasi
 const API_BASE = '/api';
 let token = localStorage.getItem('jcb_token');
+let currentUser = null;
 let map = null;
 let markers = {};
 let socket = null;
 let deviceChart = null;
 let alertChart = null;
+let notificationQueue = [];
 
 // ===== AUTH =====
-async function checkAuth() {
-    if (!token) {
-        const email = prompt('Email:');
-        const password = prompt('Sifre:');
-        if (email && password) {
-            await login(email, password);
-        } else {
-            window.location.href = '/';
-        }
-    }
+function showLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) modal.style.display = 'none';
 }
 
 async function login(email, password) {
@@ -30,15 +30,51 @@ async function login(email, password) {
         const data = await res.json();
         if (data.token) {
             token = data.token;
+            currentUser = data.user;
             localStorage.setItem('jcb_token', token);
+            localStorage.setItem('jcb_user', JSON.stringify(data.user));
+            closeLoginModal();
+            applyRoleBasedUI();
+            initPage();
             return true;
         }
-        alert('Giris basarisiz');
+        document.getElementById('loginError').textContent = 'Gecersiz email veya sifre';
         return false;
     } catch (err) {
-        alert('Sunucuya baglanilamadi');
+        document.getElementById('loginError').textContent = 'Sunucuya baglanilamadi';
         return false;
     }
+}
+
+async function checkAuth() {
+    if (!token) {
+        showLoginModal();
+        return false;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/auth/me`, { headers: getHeaders() });
+        if (res.ok) {
+            currentUser = await res.json();
+            localStorage.setItem('jcb_user', JSON.stringify(currentUser));
+            applyRoleBasedUI();
+            return true;
+        }
+    } catch (err) {}
+    localStorage.removeItem('jcb_token');
+    showLoginModal();
+    return false;
+}
+
+function applyRoleBasedUI() {
+    if (!currentUser) return;
+    const role = currentUser.role;
+
+    document.querySelectorAll('.role-admin').forEach(el => el.style.display = role === 'admin' ? '' : 'none');
+    document.querySelectorAll('.role-operator').forEach(el => el.style.display = role === 'admin' || role === 'operator' ? '' : 'none');
+    document.querySelectorAll('.role-viewer').forEach(el => el.style.display = 'none');
+
+    const userName = document.getElementById('userName');
+    if (userName) userName.textContent = currentUser.name + ' (' + role + ')';
 }
 
 function getHeaders() {
@@ -48,6 +84,29 @@ function getHeaders() {
     };
 }
 
+// ===== BILDIRIM SISTEMI =====
+function showNotification(title, message, type = 'info') {
+    const container = document.getElementById('notificationContainer');
+    if (!container) return;
+
+    const colors = { info: '#2563eb', warning: '#ca8a04', critical: '#dc2626', success: '#16a34a' };
+    const el = document.createElement('div');
+    el.className = 'notification-toast';
+    el.style.cssText = `background:${colors[type]||colors.info};color:white;padding:12px 20px;border-radius:8px;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);cursor:pointer;animation:slideIn 0.3s ease;font-size:13px;max-width:350px`;
+    el.innerHTML = `<strong>${title}</strong><br>${message}`;
+    el.onclick = () => el.remove();
+    container.appendChild(el);
+
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 8000);
+}
+
+function processNotificationQueue() {
+    while (notificationQueue.length > 0) {
+        const n = notificationQueue.shift();
+        showNotification(n.title || n.type, n.message || n.body, n.severity || 'info');
+    }
+}
+
 // ===== SOCKET.IO =====
 function connectSocket() {
     socket = io({
@@ -55,7 +114,12 @@ function connectSocket() {
         transports: ['websocket', 'polling']
     });
 
-    socket.on('connect', () => console.log('[WS] Baglandi'));
+    socket.on('connect', () => {
+        console.log('[WS] Baglandi');
+        if (currentUser) {
+            socket.emit('register:push', currentUser.id);
+        }
+    });
 
     socket.on('live:update', (data) => {
         updateMarker(data);
@@ -64,6 +128,14 @@ function connectSocket() {
             const dot = deviceItem.querySelector('.status-dot');
             if (dot) dot.className = 'status-dot online';
         }
+    });
+
+    socket.on('notification', (data) => {
+        notificationQueue.push(data);
+        if (document.visibilityState === 'visible') {
+            processNotificationQueue();
+        }
+        showNotification(data.title, data.body, data.severity || 'info');
     });
 
     socket.on('disconnect', () => console.log('[WS] Baglanti koptu'));
@@ -94,12 +166,35 @@ function updateMarker(data) {
 // ===== HARITA =====
 function initMap(devices) {
     if (map) return;
-    map = L.map('map').setView([39.0, 35.0], 6);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
-        maxZoom: 19
-    }).addTo(map);
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    });
+
+    var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '© ESRI'
+    });
+
+    var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        maxZoom: 17,
+        attribution: '© OpenTopoMap'
+    });
+
+    map = L.map('map', {
+        center: [39.0, 35.0],
+        zoom: 6,
+        layers: [osm]
+    });
+
+    var baseLayers = {
+        'Harita (OSM)': osm,
+        'Uydu (ESRI)': satellite,
+        'Topografik': topo
+    };
+
+    L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
     if (devices) {
         devices.forEach(d => {
@@ -477,6 +572,209 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ===== ELD =====
+async function initEldPage() {
+    await checkAuth();
+    if (!token) return;
+    connectSocket();
+    await loadEldDevices();
+
+    document.getElementById('eldDate').valueAsDate = new Date();
+    await loadELD();
+}
+
+async function loadEldDevices() {
+    try {
+        const res = await fetch(`${API_BASE}/device`, { headers: getHeaders() });
+        const devices = await res.json();
+        const select = document.getElementById('eldDevice');
+        if (select) {
+            select.innerHTML = devices.map(d =>
+                `<option value="${d.deviceId}">${d.name || d.deviceId} ${d.plate ? '(' + d.plate + ')' : ''}</option>`
+            ).join('');
+        }
+    } catch (err) { console.error(err); }
+}
+
+async function loadELD() {
+    try {
+        const deviceId = document.getElementById('eldDevice')?.value;
+        const date = document.getElementById('eldDate')?.value;
+        if (!deviceId) return;
+
+        const url = `${API_BASE}/eld/daily/${deviceId}${date ? '?date=' + date : ''}`;
+        const res = await fetch(url, { headers: getHeaders() });
+        const data = await res.json();
+
+        // Summary
+        const s = data.summary || {};
+        document.getElementById('eldDriving').querySelector('.eld-stat-value').textContent = (s.driving || 0).toFixed(1) + 's';
+        document.getElementById('eldOnDuty').querySelector('.eld-stat-value').textContent = (s.onDuty || 0).toFixed(1) + 's';
+        document.getElementById('eldOffDuty').querySelector('.eld-stat-value').textContent = (s.offDuty || 0).toFixed(1) + 's';
+        document.getElementById('eldSleeper').querySelector('.eld-stat-value').textContent = (s.sleeper || 0).toFixed(1) + 's';
+        const total = (s.driving || 0) + (s.onDuty || 0) + (s.offDuty || 0) + (s.sleeper || 0);
+        document.getElementById('eldTotal').querySelector('.eld-stat-value').textContent = total.toFixed(1) + 's';
+
+        // Bar
+        const bar = document.getElementById('eldBar');
+        if (bar) {
+            const maxH = 24;
+            bar.innerHTML = '';
+            const segments = [
+                { label: 'Surus', hours: s.driving || 0, color: '#2563eb' },
+                { label: 'Gorev', hours: s.onDuty || 0, color: '#ca8a04' },
+                { label: 'Istrahat', hours: s.offDuty || 0, color: '#16a34a' },
+                { label: 'Uyku', hours: s.sleeper || 0, color: '#64748b' }
+            ];
+            segments.forEach(seg => {
+                const pct = Math.min(100, (seg.hours / maxH) * 100);
+                if (pct > 0) {
+                    const div = document.createElement('div');
+                    div.style.cssText = `width:${pct}%;background:${seg.color};height:100%;display:inline-block;position:relative`;
+                    div.title = `${seg.label}: ${seg.hours.toFixed(1)}s`;
+                    bar.appendChild(div);
+                }
+            });
+            if (bar.children.length === 0) bar.innerHTML = '<div style="color:var(--gray);padding:8px">Henuz kayit yok</div>';
+        }
+
+        // Table
+        const body = document.getElementById('eldBody');
+        if (body) {
+            body.innerHTML = (data.logs || []).map(l => {
+                const start = new Date(l.startTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                const end = l.endTime ? new Date(l.endTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : 'Devam';
+                const dur = ((l.endTime ? new Date(l.endTime) : new Date()) - new Date(l.startTime)) / 3600000;
+                const statusLabels = { driving: 'Surus', on_duty: 'Gorev', off_duty: 'Istrahat', sleeper: 'Uyku' };
+                const statusColors = { driving: '#2563eb', on_duty: '#ca8a04', off_duty: '#16a34a', sleeper: '#64748b' };
+                return `<tr${l.cycleViolation ? ' style="background:#fef2f2"' : ''}>
+                    <td>${start}</td>
+                    <td>${l.driverName || '-'}</td>
+                    <td><span class="severity-badge" style="background:${statusColors[l.status]||'#e2e8f0'};color:white">${statusLabels[l.status]||l.status}</span></td>
+                    <td>${dur.toFixed(1)}s</td>
+                    <td>${l.vehicleMiles || 0}</td>
+                    <td>${l.locationStart?.name || '-'}</td>
+                    <td>${l.locationEnd?.name || '-'}</td>
+                </tr>`;
+            }).join('');
+        }
+    } catch (err) { console.error('ELD hatasi:', err); }
+}
+
+// ===== ANOMALI =====
+let anomalyChart = null;
+
+async function initAnomalyPage() {
+    await checkAuth();
+    if (!token) return;
+    connectSocket();
+    await loadAnomalyDevices();
+    await loadAnomalies();
+}
+
+async function loadAnomalyDevices() {
+    try {
+        const res = await fetch(`${API_BASE}/device`, { headers: getHeaders() });
+        const devices = await res.json();
+        const select = document.getElementById('anomalyDevice');
+        if (select) {
+            select.innerHTML = '<option value="">Tum Cihazlar</option>' +
+                devices.map(d => `<option value="${d.deviceId}">${d.name || d.deviceId}</option>`).join('');
+        }
+    } catch (err) { console.error(err); }
+}
+
+async function loadAnomalies() {
+    try {
+        const deviceId = document.getElementById('anomalyDevice')?.value;
+        const type = document.getElementById('anomalyType')?.value;
+        const severity = document.getElementById('anomalySeverity')?.value;
+        const params = new URLSearchParams({ limit: '100' });
+        if (deviceId) params.set('deviceId', deviceId);
+        if (type) params.set('type', type);
+        if (severity) params.set('severity', severity);
+
+        const res = await fetch(`${API_BASE}/anomaly?${params}`, { headers: getHeaders() });
+        const anomalies = await res.json();
+
+        // Stats
+        const statsRes = await fetch(`${API_BASE}/anomaly/stats`, { headers: getHeaders() });
+        const stats = await statsRes.json();
+        document.getElementById('anomalyCritical').textContent = stats.critical;
+        document.getElementById('anomalyHigh').textContent = stats.high;
+        document.getElementById('anomalyTotal').textContent = stats.total;
+
+        // Trend Chart
+        const ctx = document.getElementById('anomalyTrendChart')?.getContext('2d');
+        if (ctx) {
+            if (anomalyChart) anomalyChart.destroy();
+            anomalyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: (stats.trend || []).map(t => t._id),
+                    datasets: [{
+                        label: 'Anomali/Son 7 Gun',
+                        data: (stats.trend || []).map(t => t.count),
+                        borderColor: '#dc2626',
+                        backgroundColor: 'rgba(220,38,38,0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                        x: { ticks: { maxTicksLimit: 10, font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // List
+        const container = document.getElementById('anomalyList');
+        if (!container) return;
+
+        const severityColors = { critical: '#dc2626', high: '#dc2626', medium: '#ca8a04', low: '#2563eb' };
+        const typeLabels = {
+            fuel_drop: 'Yakit Dususu', fuel_surge: 'Yakit Artisi', route_deviation: 'Rota Sapmasi',
+            excessive_speed: 'Asiri Hiz', excessive_idle: 'Asiri Rolanti', battery_drain: 'Batarya Sorunu',
+            maintenance_due: 'Bakim Zamani', gps_loss: 'GPS Kaybi', engine_overrun: 'Motor Asiri Calisma',
+            unexpected_movement: 'Beklenmeyen Hareket', geofence_violation: 'Bolge Ihlali'
+        };
+
+        container.innerHTML = anomalies.map(a => `
+            <div class="anomaly-card ${a.severity}" style="border-left:4px solid ${severityColors[a.severity]||'#64748b'}">
+                <div class="anomaly-card-header">
+                    <span class="severity-badge ${a.severity}">${a.severity}</span>
+                    <span style="font-size:12px;color:var(--gray)">${new Date(a.createdAt).toLocaleString('tr-TR')}</span>
+                </div>
+                <div class="anomaly-card-title">${a.title || typeLabels[a.type] || a.type}</div>
+                <div class="anomaly-card-desc">${a.description || '-'}</div>
+                <div class="anomaly-card-meta">
+                    <span>Cihaz: ${a.deviceId}</span>
+                    <span>Skor: ${a.score || 0}/100</span>
+                    ${a.metric ? `<span>${a.metric.current?.toFixed(1)||''} ${a.metric.unit||''}</span>` : ''}
+                </div>
+                <div class="anomaly-card-actions">
+                    ${!a.acknowledged ? `<button onclick="acknowledgeAnomaly('${a._id}')" class="btn-outline" style="padding:4px 12px;font-size:12px">Onayla</button>` : `<span style="color:var(--green);font-size:12px">✓ Onaylandi</span>`}
+                </div>
+            </div>
+        `).join('');
+    } catch (err) { console.error('Anomali hatasi:', err); }
+}
+
+async function acknowledgeAnomaly(id) {
+    try {
+        await fetch(`${API_BASE}/anomaly/${id}/acknowledge`, {
+            method: 'PUT',
+            headers: getHeaders()
+        });
+        loadAnomalies();
+    } catch (err) { console.error(err); }
+}
 
 // ===== INIT BY PAGE =====
 async function initPage() {

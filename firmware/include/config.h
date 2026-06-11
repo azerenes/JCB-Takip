@@ -4,6 +4,7 @@
 // ===== CİHAZ KİMLİĞİ =====
 #define DEVICE_ID           "JCB-001"
 #define DEVICE_API_KEY      "jcb_api_key_here"
+#define FIRMWARE_VERSION    "1.0.0"
 
 // ===== PIN TANIMLARI =====
 // GPS (UART)
@@ -40,15 +41,24 @@
 #define GPS_TIMEOUT_MS      10000
 #define GSM_TIMEOUT_MS      5000
 #define DEEP_SLEEP_S        60
+#define WATCHDOG_TIMEOUT_MS 60000
 
 // ===== CAN-BUS =====
 #define CAN_SPEED           250000
 #define PGN_ENGINE_HOURS    65253
 #define PGN_VEHICLE_HOURS   65254
+#define PGN_VIN             65260
+#define PGN_FUEL_LEVEL      65263
+
+// ===== YAKIT SENSÖRÜ =====
+#define FUEL_TX_PIN         13
+#define FUEL_RX_PIN         14
 
 // ===== MQTT =====
 #define MQTT_BROKER         "mqtt://your-server.com"
+#define MQTT_BROKER_TLS     "mqtts://your-server.com"
 #define MQTT_PORT           1883
+#define MQTT_PORT_TLS       8883
 #define MQTT_KEEPALIVE      60
 #define MQTT_TOPIC_LIVE     "jcb/" DEVICE_ID "/live"
 #define MQTT_TOPIC_STATUS   "jcb/" DEVICE_ID "/status"
@@ -56,9 +66,13 @@
 #define MQTT_TOPIC_CONFIG   "jcb/" DEVICE_ID "/config"
 
 // ===== HTTP / API =====
-#define API_BASE_URL        "http://your-server.com:3000/api"
+#define API_BASE_URL        "https://your-server.com:3000/api"
+#define API_BASE_HTTP       "http://your-server.com:3000/api"
+#define API_SSL_FINGERPRINT ""
 #define API_BACKLOG_ENDPOINT "/backlog"
 #define API_REGISTER_ENDPOINT "/device/register"
+#define API_OTA_ENDPOINT    "/ota"
+#define API_CONFIG_ENDPOINT "/config"
 
 // ===== SD KART =====
 #define SD_LOG_DIR          "/jcb_logs"
@@ -76,5 +90,9 @@
 // ===== UYKU YÖNETİMİ =====
 #define WAKEUP_PIN_BITMASK  GPIO_SEL_33
 #define BATTERY_LOW_MV      3400
+
+// ===== BİLDİRİM AYARLARI =====
+#define NOTIFY_EMAIL_TO     "admin@jcbtracker.com"
+#define NOTIFY_SMS_TO       "+905555555555"
 
 #endif

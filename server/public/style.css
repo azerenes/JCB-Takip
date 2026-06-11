@@ -384,6 +384,91 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
+/* ELD Logbook */
+.eld-container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+.eld-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.eld-header h1 { font-size: 22px; }
+.eld-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.eld-controls select, .eld-controls input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+.eld-summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+.eld-stat { background: var(--card); padding: 16px; border-radius: 10px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.eld-stat-value { font-size: 24px; font-weight: 700; display: block; }
+.eld-stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.eld-bar-container { background: var(--card); border-radius: 10px; padding: 4px; margin-bottom: 20px; height: 32px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.eld-bar { height: 100%; display: flex; border-radius: 6px; overflow: hidden; }
+.eld-log-table-container { background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.eld-table { width: 100%; border-collapse: collapse; }
+.eld-table th { text-align: left; padding: 12px 16px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary); border-bottom: 2px solid var(--border); }
+.eld-table td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+
+/* Anomali */
+.anomaly-container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+.anomaly-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.anomaly-header h1 { font-size: 22px; }
+.anomaly-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+.anomaly-controls select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+.anomaly-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+.anomaly-trend-chart { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.anomaly-list { display: grid; gap: 12px; }
+.anomaly-card { background: var(--card); padding: 16px 20px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.anomaly-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.anomaly-card-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.anomaly-card-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+.anomaly-card-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); }
+.anomaly-card-actions { margin-top: 8px; }
+
+@media (max-width: 768px) {
+    .eld-summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .anomaly-stats-grid { grid-template-columns: 1fr; }
+    .eld-controls { flex-direction: column; }
+}
+
+/* Modal Giris */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: var(--card);
+    padding: 40px;
+    border-radius: 16px;
+    width: 400px;
+    max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 { margin-bottom: 8px; font-size: 22px; }
+
+.modal-content input[type="email"],
+.modal-content input[type="password"] {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    margin-bottom: 12px;
+}
+
+.modal-content button {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.modal-content button:hover { background: var(--primary-dark); }
+
 /* Responsive */
 @media (max-width: 1024px) {
     .main-container {

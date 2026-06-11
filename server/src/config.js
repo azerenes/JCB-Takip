@@ -2,12 +2,34 @@ require('dotenv').config();
 
 module.exports = {
     port: parseInt(process.env.PORT) || 3000,
+    httpsPort: parseInt(process.env.HTTPS_PORT) || 3443,
     mongodbUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/jcb_tracker',
-    mqttBroker: process.env.MQTT_BROKER || 'mqtt://localhost:1883',
-    mqttWsBroker: process.env.MQTT_WS_BROKER || 'ws://localhost:8083',
     jwtSecret: process.env.JWT_SECRET || 'default_secret_change_me',
-    adminEmail: process.env.ADMIN_EMAIL || 'admin@jcbtracker.com',
-    adminPassword: process.env.ADMIN_PASSWORD || 'admin123',
+
+    ssl: {
+        enabled: process.env.SSL_ENABLED === 'true',
+        key: process.env.SSL_KEY_PATH || './ssl/server.key',
+        cert: process.env.SSL_CERT_PATH || './ssl/server.crt'
+    },
+
+    mqttBroker: process.env.MQTT_BROKER || 'mqtt://localhost:1883',
+    mqttBrokerTLS: process.env.MQTT_BROKER_TLS || 'mqtts://localhost:8883',
+    mqttWsBroker: process.env.MQTT_WS_BROKER || 'ws://localhost:8083',
+
+    smtp: {
+        host: process.env.SMTP_HOST || '',
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        user: process.env.SMTP_USER || '',
+        pass: process.env.SMTP_PASS || '',
+        from: process.env.SMTP_FROM || 'noreply@jcbtracker.com'
+    },
+
+    sms: {
+        apiKey: process.env.SMS_API_KEY || '',
+        apiSecret: process.env.SMS_API_SECRET || '',
+        from: process.env.SMS_FROM || '+905555555555'
+    },
 
     mqttTopics: {
         live: 'jcb/+/live',

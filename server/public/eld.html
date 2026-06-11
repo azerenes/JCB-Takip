@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCB Tracker - ELD Logbook</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="notificationContainer" style="position:fixed;top:70px;right:20px;z-index:9999"></div>
+    <nav class="navbar">
+        <div class="nav-brand">JCB Tracker</div>
+        <div class="nav-links">
+            <a href="index.html">Harita</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="eld.html" class="active">ELD</a>
+            <a href="anomaly.html">Anomali</a>
+            <a href="reports.html">Raporlar</a>
+            <a href="#" id="logoutBtn">Çıkış</a>
+        </div>
+        <span id="userName" style="font-size:12px;color:var(--gray);margin-left:auto"></span>
+    </nav>
+
+    <div class="eld-container">
+        <div class="eld-header">
+            <h1>ELD Sürücü Logbook</h1>
+            <div class="eld-controls">
+                <select id="eldDevice"></select>
+                <input type="date" id="eldDate" />
+                <button onclick="loadELD()" class="btn-primary">Göster</button>
+            </div>
+        </div>
+
+        <div class="eld-summary-grid">
+            <div class="eld-stat" id="eldDriving"><span class="eld-stat-value">-</span><span class="eld-stat-label">Sürüş</span></div>
+            <div class="eld-stat" id="eldOnDuty"><span class="eld-stat-value">-</span><span class="eld-stat-label">Görev</span></div>
+            <div class="eld-stat" id="eldOffDuty"><span class="eld-stat-value">-</span><span class="eld-stat-label">İstirahat</span></div>
+            <div class="eld-stat" id="eldSleeper"><span class="eld-stat-value">-</span><span class="eld-stat-label">Uyku</span></div>
+            <div class="eld-stat" id="eldTotal"><span class="eld-stat-value">-</span><span class="eld-stat-label">Toplam</span></div>
+        </div>
+
+        <div class="eld-bar-container">
+            <div id="eldBar" class="eld-bar"></div>
+        </div>
+
+        <div class="eld-log-table-container">
+            <table class="eld-table">
+                <thead><tr><th>Saat</th><th>Sürücü</th><th>Durum</th><th>Süre</th><th>Km</th><th>Başlangıç</th><th>Bitiş</th></tr></thead>
+                <tbody id="eldBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="app.js"></script>
+    <script>document.addEventListener('DOMContentLoaded', () => { checkAuth().then(a => { if (a) initEldPage(); }); });</script>
+</body>
+</html>

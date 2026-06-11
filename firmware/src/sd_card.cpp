@@ -125,3 +125,34 @@ void sd_card_status() {
         Serial.printf("[SD] Kullanilan: %llu / %llu bytes\n", used, total);
     }
 }
+
+void sd_card_check_integrity() {
+    if (!sd_ready) return;
+
+    if (SD.exists(SD_LOG_FILENAME)) {
+        File file = SD.open(SD_LOG_FILENAME, FILE_READ);
+        if (file) {
+            size_t size = file.fileSize();
+            int lines = 0;
+            char c;
+            while (file.available()) {
+                c = file.read();
+                if (c == '\n') lines++;
+            }
+            file.close();
+
+            if (lines > 0) {
+                Serial.printf("[SD] Log dosyasi: %d bytes, %d satir\n", size, lines);
+            } else {
+                Serial.println("[SD] Log dosyasi bos, siliniyor...");
+                SD.remove(SD_LOG_FILENAME);
+            }
+        }
+    }
+
+    // Check for partial writes from crash
+    if (SD.exists(SD_LOG_DIR "/partial.tmp")) {
+        Serial.println("[SD] Yari yazilmis dosya bulundu, temizleniyor...");
+        SD.remove(SD_LOG_DIR "/partial.tmp");
+    }
+}
