@@ -12,3 +12,8 @@ dist/
 *.pdf
 .DS_Store
 Thumbs.db
+
+# Desktop app
+desktop/data/
+desktop/dist/
+desktop/*.exe

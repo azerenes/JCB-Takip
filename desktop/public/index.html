@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JCB Tracker</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root { --bg:#0f172a; --surface:#1e293b; --surface2:#334155; --text:#f1f5f9; --text2:#94a3b8; --primary:#3b82f6; --success:#22c55e; --warning:#eab308; --danger:#ef4444; --radius:12px; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+.sidebar { width:240px; background:var(--surface); border-right:1px solid var(--surface2); padding:20px; display:flex; flex-direction:column; flex-shrink:0; }
+.sidebar .brand { font-size:18px; font-weight:700; padding:12px 0 20px; border-bottom:1px solid var(--surface2); margin-bottom:16px; display:flex; align-items:center; gap:10px; }
+.sidebar .brand .icon { width:32px;height:32px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px; }
+.nav-item { padding:10px 12px; border-radius:8px; color:var(--text2); cursor:pointer; display:flex; align-items:center; gap:10px; font-size:14px; margin-bottom:2px; transition:all 0.2s; text-decoration:none; }
+.nav-item:hover { background:var(--surface2); color:var(--text); }
+.nav-item.active { background:var(--primary); color:#fff; }
+.nav-item .badge { margin-left:auto; background:var(--danger); color:#fff; font-size:11px; padding:2px 8px; border-radius:10px; }
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.topbar { padding:16px 24px; border-bottom:1px solid var(--surface2); display:flex; align-items:center; justify-content:space-between; }
+.topbar .page-title { font-size:20px; font-weight:600; }
+.topbar .user-info { display:flex; align-items:center; gap:12px; font-size:14px; color:var(--text2); }
+.topbar .user-info .avatar { width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px; }
+.content { flex:1; padding:24px; overflow-y:auto; }
+.page { display:none; }
+.page.active { display:block; }
+
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border-radius:var(--radius); padding:20px; border:1px solid var(--surface2); }
+.stat-card .label { color:var(--text2); font-size:13px; margin-bottom:4px; }
+.stat-card .value { font-size:28px; font-weight:700; }
+.stat-card .sub { color:var(--text2); font-size:12px; margin-top:4px; }
+.stat-card .trend-up { color:var(--success); } .stat-card .trend-down { color:var(--danger); }
+
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+.card { background:var(--surface); border-radius:var(--radius); padding:20px; border:1px solid var(--surface2); }
+.card h3 { font-size:15px; margin-bottom:16px; color:var(--text); }
+
+#map { height:100%; min-height:500px; border-radius:var(--radius); z-index:1; }
+
+.device-list { max-height:400px; overflow-y:auto; }
+.device-item { display:flex; align-items:center; padding:10px; border-radius:8px; cursor:pointer; transition:background 0.2s; gap:10px; }
+.device-item:hover { background:var(--surface2); }
+.device-item .dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+.device-item .dot.online { background:var(--success); } .device-item .dot.offline { background:var(--text2); }
+.device-item .info { flex:1; }
+.device-item .info .name { font-size:14px; } .device-item .info .detail { font-size:12px; color:var(--text2); }
+.device-item .speed { font-size:14px; font-weight:600; }
+
+.alert-item { padding:12px; border-radius:8px; margin-bottom:8px; border-left:3px solid; display:flex; gap:10px; }
+.alert-item.critical { border-color:var(--danger); background:rgba(239,68,68,0.1); }
+.alert-item.warning { border-color:var(--warning); background:rgba(234,179,8,0.1); }
+.alert-item.info { border-color:var(--primary); background:rgba(59,130,246,0.1); }
+.alert-item .msg { flex:1; font-size:13px; }
+.alert-item .time { font-size:11px; color:var(--text2); }
+
+input, select { background:var(--surface2); border:1px solid transparent; border-radius:8px; padding:8px 12px; color:var(--text); font-size:14px; outline:none; width:100%; }
+input:focus, select:focus { border-color:var(--primary); }
+
+@media(max-width:900px){ .sidebar{width:60px;padding:12px 8px;} .sidebar .brand span,.nav-item span{display:none;} .grid-2,.grid-3{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="sidebar" id="sidebar">
+    <div class="brand"><div class="icon">&#x1f4f1;</div><span>JCB Tracker</span></div>
+    <a class="nav-item active" href="#" data-page="dashboard"><span>&#x1f4ca;</span><span>Dashboard</span></a>
+    <a class="nav-item" href="#" data-page="map"><span>&#x1f5fa;</span><span>Canli Harita</span></a>
+    <a class="nav-item" href="#" data-page="devices"><span>&#x1f4f1;</span><span>Cihazlar</span><span class="badge" id="deviceBadge" style="display:none">0</span></a>
+    <a class="nav-item" href="#" data-page="alerts"><span>&#x26a0;</span><span>Uyarilar</span><span class="badge" id="alertBadge" style="display:none">0</span></a>
+    <a class="nav-item" href="#" data-page="reports-pg"><span>&#x1f4dd;</span><span>Raporlar</span></a>
+    <a class="nav-item" href="#" data-page="eld-pg"><span>&#x1f4c5;</span><span>ELD</span></a>
+    <a class="nav-item" href="#" data-page="anomaly-pg"><span>&#x1f50d;</span><span>Anomali</span></a>
+    <a class="nav-item" href="#" data-page="settings" style="margin-top:auto;"><span>&#x2699;</span><span>Ayarlar</span></a>
+    <a class="nav-item" href="#" id="logoutBtn"><span>&#x2192;</span><span>Cikis</span></a>
+</div>
+
+<div class="main">
+    <div class="topbar">
+        <div class="page-title" id="pageTitle">Dashboard</div>
+        <div class="user-info"><span id="userName"></span><div class="avatar" id="userAvatar">A</div></div>
+    </div>
+    <div class="content" id="mainContent">
+        <!-- Dashboard Page -->
+        <div class="page active" id="page-dashboard">
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card"><div class="label">Toplam Cihaz</div><div class="value" id="statTotal">-</div><div class="sub" id="statTotalSub"></div></div>
+                <div class="stat-card"><div class="label">Aktif Cihaz</div><div class="value" id="statActive" style="color:var(--success)">-</div><div class="sub">son 5 dk</div></div>
+                <div class="stat-card"><div class="label">Bekleyen Uyari</div><div class="value" id="statAlerts" style="color:var(--warning)">-</div><div class="sub" id="statAlertsSub"></div></div>
+                <div class="stat-card"><div class="label">Bugun</div><div class="value" id="statToday" style="color:var(--primary)">-</div><div class="sub">bugunku uyarilar</div></div>
+            </div>
+            <div class="grid-2">
+                <div class="card"><h3>Son Uyarilar</h3><div id="recentAlerts"><p style="color:var(--text2);font-size:13px;">Yukleniyor...</p></div></div>
+                <div class="card"><h3>Cihaz Durumu</h3><div id="deviceStatusList"><p style="color:var(--text2);font-size:13px;">Yukleniyor...</p></div></div>
+            </div>
+            <div class="grid-2" style="margin-top:16px;">
+                <div class="card"><h3>Gruplar</h3><div id="groupList"><p style="color:var(--text2);font-size:13px;">Yukleniyor...</p></div></div>
+                <div class="card"><h3>Hizli Islemler</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <button onclick="navigateTo('map')" style="padding:12px;border-radius:8px;background:var(--surface2);border:none;color:var(--text);cursor:pointer;">Haritayi Ac</button>
+                        <button onclick="navigateTo('devices')" style="padding:12px;border-radius:8px;background:var(--surface2);border:none;color:var(--text);cursor:pointer;">Cihazlari Gor</button>
+                        <button onclick="navigateTo('reports-pg')" style="padding:12px;border-radius:8px;background:var(--surface2);border:none;color:var(--text);cursor:pointer;">Rapor Al</button>
+                        <button onclick="refreshDashboard()" style="padding:12px;border-radius:8px;background:var(--primary);border:none;color:#fff;cursor:pointer;">Yenile</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Page -->
+        <div class="page" id="page-map"><div id="map"></div></div>
+
+        <!-- Devices Page -->
+        <div class="page" id="page-devices">
+            <div style="display:flex;gap:12px;margin-bottom:16px;">
+                <input type="text" id="deviceSearch" placeholder="Cihaz ara..." style="max-width:300px;" oninput="loadDevices()">
+                <select id="deviceGroupFilter" style="max-width:200px;" onchange="loadDevices()"><option value="">Tum Gruplar</option></select>
+                <select id="deviceStatusFilter" style="max-width:150px;" onchange="loadDevices()"><option value="">Tum Durum</option><option value="active">Aktif</option><option value="inactive">Pasif</option></select>
+                <button onclick="showAddDevice()" style="padding:8px 16px;background:var(--primary);border:none;border-radius:8px;color:#fff;cursor:pointer;">+ Cihaz Ekle</button>
+            </div>
+            <div id="deviceTable"></div>
+        </div>
+
+        <!-- Alerts Page -->
+        <div class="page" id="page-alerts">
+            <div style="display:flex;gap:12px;margin-bottom:16px;">
+                <select id="alertSeverity" onchange="loadAlerts()" style="max-width:150px;"><option value="">Tum Seviye</option><option value="critical">Kritik</option><option value="warning">Uyari</option><option value="info">Bilgi</option></select>
+                <select id="alertAck" onchange="loadAlerts()" style="max-width:150px;"><option value="">Tum</option><option value="false">Bekleyen</option><option value="true">Onaylanan</option></select>
+                <button onclick="loadAlerts()" style="padding:8px 16px;background:var(--primary);border:none;border-radius:8px;color:#fff;cursor:pointer;">Yenile</button>
+            </div>
+            <div id="alertList"></div>
+        </div>
+
+        <!-- Reports Page -->
+        <div class="page" id="page-reports-pg">
+            <div class="grid-2">
+                <div class="card">
+                    <h3>Cihaz Raporu</h3>
+                    <div style="display:flex;flex-direction:column;gap:12px;">
+                        <select id="reportDevice"><option value="">Cihaz secin</option></select>
+                        <div style="display:flex;gap:8px;"><input type="date" id="reportStart"><input type="date" id="reportEnd"></div>
+                        <div style="display:flex;gap:8px;">
+                            <button onclick="downloadReport('json')" style="flex:1;padding:10px;background:var(--primary);border:none;border-radius:8px;color:#fff;cursor:pointer;">JSON</button>
+                            <button onclick="downloadReport('csv')" style="flex:1;padding:10px;background:var(--surface2);border:none;border-radius:8px;color:var(--text);cursor:pointer;">CSV</button>
+                            <button onclick="downloadReport('pdf')" style="flex:1;padding:10px;background:var(--surface2);border:none;border-radius:8px;color:var(--text);cursor:pointer;">PDF</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Ozet Rapor</h3>
+                    <div style="display:flex;flex-direction:column;gap:12px;">
+                        <div style="display:flex;gap:8px;"><input type="date" id="summaryStart"><input type="date" id="summaryEnd"></div>
+                        <button onclick="generateSummary()" style="padding:10px;background:var(--primary);border:none;border-radius:8px;color:#fff;cursor:pointer;">Rapor Olustur</button>
+                        <div id="summaryResult"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ELD Page -->
+        <div class="page" id="page-eld-pg">
+            <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+                <select id="eldDevice" style="max-width:250px;"><option value="">Cihaz secin</option></select>
+                <input type="date" id="eldDate">
+                <button onclick="loadELD()" style="padding:8px 16px;background:var(--primary);border:none;border-radius:8px;color:#fff;cursor:pointer;">Getir</button>
+            </div>
+            <div id="eldContent"><p style="color:var(--text2);">Cihaz ve tarih secin</p></div>
+        </div>
+
+        <!-- Anomaly Page -->
+        <div class="page" id="page-anomaly-pg">
+            <div style="display:flex;gap:12px;margin-bottom:16px;">
+                <select id="anomalyDevice" style="max-width:250px;"><option value="">Tum Cihazlar</option></select>
+                <select id="anomalySeverity" style="max-width:150px;"><option value="">Tum Seviye</option><option value="critical">Kritik</option><option value="high">Yuksek</option><option value="medium">Orta</option><option value="low">Dusuk</option></select>
+                <button onclick="loadAnomalies()" style="padding:8px 16px;background:var(--primary);border:none;border-radius:8px;color:#fff;cursor:pointer;">Yenile</button>
+            </div>
+            <div id="anomalyList"></div>
+        </div>
+
+        <!-- Settings Page -->
+        <div class="page" id="page-settings">
+            <div class="card" style="max-width:500px;">
+                <h3>Hesap Ayarlari</h3>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div><label style="color:var(--text2);font-size:13px;">Ad Soyad</label><input type="text" id="settingsName"></div>
+                    <div><label style="color:var(--text2);font-size:13px;">E-posta</label><input type="email" id="settingsEmail" disabled style="opacity:0.5;"></div>
+                    <div><button onclick="updateProfile()" style="padding:10px;background:var(--primary);border:none;border-radius:8px;color:#fff;cursor:pointer;">Kaydet</button></div>
+                </div>
+            </div>
+            <div class="card" style="max-width:500px;margin-top:16px;">
+                <h3>Sifre Degistir</h3>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <input type="password" id="pwdCurrent" placeholder="Mevcut sifre">
+                    <input type="password" id="pwdNew" placeholder="Yeni sifre">
+                    <button onclick="changePassword()" style="padding:10px;background:var(--surface2);border:none;border-radius:8px;color:var(--text);cursor:pointer;">Sifreyi Degistir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const API = '/api';
+let token = localStorage.getItem('token');
+let user = null;
+let map = null;
+let markers = {};
+let devices = [];
+let refreshInterval = null;
+
+function showNotification(msg, type='info') {
+    const c = document.getElementById('notificationContainer') || document.body;
+    const d = document.createElement('div');
+    d.style.cssText = `padding:12px 20px;border-radius:8px;margin-bottom:8px;font-size:13px;animation:slideIn 0.3s;background:${type==='error'?'var(--danger)':type==='success'?'var(--success)':'var(--primary)'};color:#fff;`;
+    d.textContent = msg;
+    c.appendChild(d);
+    setTimeout(() => d.remove(), 4000);
+}
+
+function api(path, opts = {}) {
+    opts.headers = { ...opts.headers, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    return fetch(`${API}${path}`, opts).then(r => r.json());
+}
+
+// Auth
+async function checkAuth() {
+    if (!token) { window.location.href = '/login.html'; return; }
+    try {
+        const me = await api('/auth/me');
+        user = me;
+        document.getElementById('userName').textContent = me.name || me.email;
+        document.getElementById('userAvatar').textContent = (me.name || me.email)[0].toUpperCase();
+        if (me.isSuperAdmin) {
+            document.querySelector('[data-page="settings"]').insertAdjacentHTML('afterend', '<a class="nav-item" href="#" data-page="superadmin"><span>&#x1f465;</span><span>Super Admin</span></a>');
+        }
+        initPages();
+    } catch (e) {
+        localStorage.removeItem('token');
+        window.location.href = '/login.html';
+    }
+}
+
+// Navigation
+function navigateTo(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const pg = document.getElementById(`page-${page}`);
+    if (pg) pg.classList.add('active');
+    const nav = document.querySelector(`[data-page="${page}"]`);
+    if (nav) nav.classList.add('active');
+
+    const titles = { dashboard:'Dashboard', map:'Canli Harita', devices:'Cihazlar', alerts:'Uyarilar', 'reports-pg':'Raporlar', 'eld-pg':'ELD', 'anomaly-pg':'Anomali', settings:'Ayarlar', superadmin:'Super Admin' };
+    document.getElementById('pageTitle').textContent = titles[page] || page;
+
+    if (page === 'dashboard') refreshDashboard();
+    else if (page === 'map') setTimeout(initMap, 100);
+    else if (page === 'devices') loadDevices();
+    else if (page === 'alerts') loadAlerts();
+    else if (page === 'reports-pg') loadReportDevices();
+    else if (page === 'eld-pg') { loadELDDevices(); }
+    else if (page === 'anomaly-pg') { loadAnomalyDevices(); loadAnomalies(); }
+    else if (page === 'superadmin') { if (!window.loadSuperAdmin) { const s = document.createElement('script'); s.src = 'superadmin.js'; document.body.appendChild(s); } else loadSuperAdmin(); }
+}
+
+function initPages() {
+    document.querySelectorAll('.nav-item[data-page]').forEach(el => {
+        el.addEventListener('click', e => { e.preventDefault(); navigateTo(el.dataset.page); });
+    });
+    document.getElementById('logoutBtn').addEventListener('click', e => {
+        e.preventDefault(); localStorage.removeItem('token'); window.location.href = '/login.html';
+    });
+    refreshDashboard();
+}
+
+// DASHBOARD
+async function refreshDashboard() {
+    try {
+        const sum = await api('/panel/summary');
+        document.getElementById('statTotal').textContent = sum.devices.total;
+        document.getElementById('statTotalSub').textContent = `${sum.devices.active} aktif, ${sum.devices.inactive} pasif`;
+        document.getElementById('statActive').textContent = sum.devices.active;
+        document.getElementById('statAlerts').textContent = sum.alerts.unacknowledged;
+        document.getElementById('statAlertsSub').textContent = `${sum.alerts.critical} kritik`;
+        document.getElementById('statToday').textContent = sum.alerts.today;
+
+        document.getElementById('deviceBadge').style.display = sum.devices.total > 0 ? 'inline' : 'none';
+        document.getElementById('deviceBadge').textContent = sum.devices.total;
+
+        const alerts = await api('/panel/alerts?limit=5&acknowledged=false');
+        const c = document.getElementById('recentAlerts');
+        if (alerts.length === 0) { c.innerHTML = '<p style="color:var(--text2);font-size:13px;">Bekleyen uyari yok</p>'; }
+        else {
+            c.innerHTML = alerts.map(a => `<div class="alert-item ${a.severity}"><div class="msg"><strong>${a.type}</strong><br>${a.message}</div><div class="time">${new Date(a.createdAt).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}</div></div>`).join('');
+        }
+
+        if (alerts.filter(a => !a.acknowledged).length > 0) {
+            document.getElementById('alertBadge').style.display = 'inline';
+            document.getElementById('alertBadge').textContent = alerts.filter(a => !a.acknowledged).length;
+        } else { document.getElementById('alertBadge').style.display = 'none'; }
+
+        const live = await api('/panel/devices-live');
+        const statusList = document.getElementById('deviceStatusList');
+        if (live.length === 0) { statusList.innerHTML = '<p style="color:var(--text2);font-size:13px;">Cihaz bulunamadi</p>'; }
+        else {
+            const online = live.filter(d => d.isOnline).length;
+            statusList.innerHTML = `<div class="device-list">${live.slice(0,10).map(d => `
+                <div class="device-item" onclick="navigateTo('map')">
+                    <div class="dot ${d.isOnline?'online':'offline'}"></div>
+                    <div class="info"><div class="name">${d.name || d.deviceId}</div><div class="detail">${d.plate || ''} ${d.group ? '| '+d.group : ''}</div></div>
+                    <div class="speed">${d.lastLocation?.speed ? d.lastLocation.speed.toFixed(0) + ' km/h' : '--'}</div>
+                </div>`).join('')}</div>`;
+        }
+
+        const groups = sum.groups || [];
+        document.getElementById('groupList').innerHTML = groups.length ? groups.map(g => `<div style="padding:8px 12px;background:var(--surface2);border-radius:8px;margin-bottom:4px;font-size:14px;">${g}</div>`).join('') : '<p style="color:var(--text2);font-size:13px;">Grup bulunamadi</p>';
+    } catch(e) { showNotification('Dashboard yuklenemedi', 'error'); }
+}
+
+// MAP
+function initMap() {
+    if (!document.getElementById('map').offsetParent) return;
+    if (!map) {
+        map = L.map('map').setView([39.0, 35.0], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OpenStreetMap', maxZoom: 18 }).addTo(map);
+    }
+    loadMapDevices();
+    if (refreshInterval) clearInterval(refreshInterval);
+    refreshInterval = setInterval(loadMapDevices, 15000);
+}
+
+async function loadMapDevices() {
+    try {
+        const live = await api('/panel/devices-live');
+        devices = live;
+        live.forEach(d => {
+            const pos = d.lastLocation;
+            if (!pos || !pos.lat) return;
+            const color = d.isOnline ? '#22c55e' : (d.status === 'inactive' ? '#ef4444' : '#eab308');
+            const size = d.isOnline ? 12 : 8;
+            if (markers[d.deviceId]) { markers[d.deviceId].setLatLng([pos.lat, pos.lng]); }
+            else {
+                const icon = L.divIcon({ html: `<div style="width:${size*2}px;height:${size*2}px;background:${color};border:2px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`, iconSize: [size*2, size*2], iconAnchor: [size, size], className: '' });
+                markers[d.deviceId] = L.marker([pos.lat, pos.lng], { icon }).addTo(map)
+                    .bindPopup(`<b>${d.name || d.deviceId}</b><br>${d.plate || ''}<br>${pos.speed ? pos.speed.toFixed(0)+' km/h' : ''}<br>${d.isOnline ? '<span style="color:#22c55e">Cevrimici</span>' : '<span style="color:#ef4444">Cevrimdisi</span>'}`);
+            }
+        });
+        Object.keys(markers).forEach(id => { if (!live.find(d => d.deviceId === id)) { map.removeLayer(markers[id]); delete markers[id]; } });
+    } catch(e) {}
+}
+
+// DEVICES
+async function loadDevices() {
+    try {
+        const search = document.getElementById('deviceSearch').value;
+        const group = document.getElementById('deviceGroupFilter').value;
+        const status = document.getElementById('deviceStatusFilter').value;
+        let url = '/device?';
+        if (search) url += `search=${encodeURIComponent(search)}&`;
+        if (group) url += `group=${encodeURIComponent(group)}&`;
+        if (status) url += `status=${encodeURIComponent(status)}&`;
+        const devs = await api(url);
+        const c = document.getElementById('deviceTable');
+        if (devs.length === 0) { c.innerHTML = '<p style="color:var(--text2);">Cihaz bulunamadi</p>'; return; }
+
+        const groups = [...new Set(devs.map(d => d.group).filter(Boolean))];
+        const sel = document.getElementById('deviceGroupFilter');
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">Tum Gruplar</option>' + groups.map(g => `<option value="${g}" ${g===cur?'selected':''}>${g}</option>`).join('');
+
+        c.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+            <tr style="color:var(--text2);font-size:13px;"><th style="text-align:left;padding:8px;">Cihaz</th><th style="text-align:left;padding:8px;">Plaka</th><th style="text-align:left;padding:8px;">Grup</th><th style="text-align:left;padding:8px;">Durum</th><th style="text-align:left;padding:8px;">Son Konum</th><th style="text-align:left;padding:8px;">Hiz</th><th style="text-align:left;padding:8px;"></th></tr>
+            ${devs.map(d => `<tr style="border-bottom:1px solid var(--surface2);font-size:14px;">
+                <td style="padding:8px;">${d.name || d.deviceId}</td>
+                <td style="padding:8px;color:var(--text2)">${d.plate || '-'}</td>
+                <td style="padding:8px;color:var(--text2)">${d.group || '-'}</td>
+                <td style="padding:8px;"><span style="color:${d.status==='active'?'var(--success)':'var(--text2)'}">${d.status || 'unknown'}</span></td>
+                <td style="padding:8px;color:var(--text2);font-size:12px;">${d.lastLocation?.lat ? d.lastLocation.lat.toFixed(4)+', '+d.lastLocation.lng.toFixed(4) : '-'}</td>
+                <td style="padding:8px;">${d.lastLocation?.speed ? d.lastLocation.speed.toFixed(0)+' km/h' : '-'}</td>
+                <td style="padding:8px;"><button onclick="deleteDevice('${d.deviceId}')" style="padding:4px 12px;background:var(--danger);border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;">Sil</button></td>
+            </tr>`).join('')}</table>`;
+    } catch(e) { showNotification('Cihazlar yuklenemedi', 'error'); }
+}
+
+async function deleteDevice(id) {
+    if (!confirm('Bu cihazi silmek istediginize emin misiniz?')) return;
+    try { await api(`/device/${id}`, { method:'DELETE' }); showNotification('Cihaz silindi', 'success'); loadDevices(); }
+    catch(e) { showNotification('Silme hatasi', 'error'); }
+}
+
+function showAddDevice() {
+    const id = prompt('Cihaz ID (ornek: DEV-001):');
+    if (!id) return;
+    const name = prompt('Cihaz adi:');
+    if (!name) return;
+    api('/device/register', { method:'POST', body:JSON.stringify({ deviceId:id, name }) }).then(r => {
+        if (r.device) { showNotification('Cihaz eklendi: '+r.device.apiKey, 'success'); loadDevices(); }
+        else showNotification(r.error || 'Hata', 'error');
+    });
+}
+
+// ALERTS
+async function loadAlerts() {
+    try {
+        const severity = document.getElementById('alertSeverity').value;
+        const ack = document.getElementById('alertAck').value;
+        let url = '/panel/alerts?limit=50';
+        if (severity) url += `&severity=${severity}`;
+        if (ack !== '') url += `&acknowledged=${ack}`;
+        const alerts = await api(url);
+        const c = document.getElementById('alertList');
+        if (alerts.length === 0) { c.innerHTML = '<p style="color:var(--text2);">Uyari bulunamadi</p>'; return; }
+        c.innerHTML = alerts.map(a => `<div class="alert-item ${a.severity}">
+            <div class="msg"><strong>${a.type}</strong> - ${a.deviceId}<br>${a.message}</div>
+            <div style="text-align:right;flex-shrink:0;">
+                <div class="time">${new Date(a.createdAt).toLocaleString('tr-TR')}</div>
+                ${!a.acknowledged ? `<button onclick="ackAlert('${a._id}')" style="margin-top:4px;padding:4px 8px;background:var(--primary);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:11px;">Onayla</button>` : '<span style="font-size:11px;color:var(--success)">Onaylandi</span>'}
+            </div>
+        </div>`).join('');
+    } catch(e) { showNotification('Uyarilar yuklenemedi', 'error'); }
+}
+
+async function ackAlert(id) {
+    try { await api(`/panel/alerts/${id}/acknowledge`, { method:'PUT', body:'{}' }); showNotification('Onaylandi', 'success'); loadAlerts(); }
+    catch(e) { showNotification('Hata', 'error'); }
+}
+
+// REPORTS
+async function loadReportDevices() {
+    try {
+        const devs = await api('/device');
+        const sel = document.getElementById('reportDevice');
+        sel.innerHTML = '<option value="">Cihaz secin</option>' + devs.map(d => `<option value="${d.deviceId}">${d.name || d.deviceId}</option>`).join('');
+        const sel2 = document.getElementById('eldDevice');
+        sel2.innerHTML = '<option value="">Cihaz secin</option>' + devs.map(d => `<option value="${d.deviceId}">${d.name || d.deviceId}</option>`).join('');
+        const sel3 = document.getElementById('anomalyDevice');
+        sel3.innerHTML = '<option value="">Tum Cihazlar</option>' + devs.map(d => `<option value="${d.deviceId}">${d.name || d.deviceId}</option>`).join('');
+    } catch(e) {}
+}
+
+function downloadReport(format) {
+    const deviceId = document.getElementById('reportDevice').value;
+    if (!deviceId) { showNotification('Cihaz secin', 'error'); return; }
+    const start = document.getElementById('reportStart').value;
+    const end = document.getElementById('reportEnd').value;
+    let url = `/reports/device-report/${deviceId}?format=${format}`;
+    if (start) url += `&start=${new Date(start).getTime()}`;
+    if (end) url += `&end=${new Date(end).getTime()}`;
+    window.open(`${API}${url}`, '_blank');
+}
+
+async function generateSummary() {
+    const start = document.getElementById('summaryStart').value;
+    const end = document.getElementById('summaryEnd').value;
+    let url = '/reports/summary-report?';
+    if (start) url += `&start=${new Date(start).getTime()}`;
+    if (end) url += `&end=${new Date(end).getTime()}`;
+    try {
+        const r = await api(url);
+        document.getElementById('summaryResult').innerHTML = `<div class="license-info" style="margin-top:12px;background:var(--surface2);border-radius:8px;padding:16px;">
+            <div class="row" style="display:flex;justify-content:space-between;padding:4px 0;color:var(--text2);font-size:14px;"><span>Cihaz Sayisi</span><span style="color:var(--text);">${r.totalDevices}</span></div>
+            <div class="row" style="display:flex;justify-content:space-between;padding:4px 0;color:var(--text2);font-size:14px;"><span>Toplam Kayit</span><span style="color:var(--text);">${r.totalLogs}</span></div>
+            <div class="row" style="display:flex;justify-content:space-between;padding:4px 0;color:var(--text2);font-size:14px;"><span>Toplam Uyari</span><span style="color:var(--text);">${r.totalAlerts}</span></div>
+        </div>`;
+    } catch(e) { showNotification('Rapor hatasi', 'error'); }
+}
+
+// ELD
+async function loadELDDevices() { /* same as reports */ }
+function loadELD() {
+    const deviceId = document.getElementById('eldDevice').value;
+    if (!deviceId) { showNotification('Cihaz secin', 'error'); return; }
+    const date = document.getElementById('eldDate').value || new Date().toISOString().split('T')[0];
+    api(`/eld/daily/${deviceId}?date=${date}`).then(r => {
+        const c = document.getElementById('eldContent');
+        if (r.error) { c.innerHTML = `<p style="color:var(--danger);">${r.error}</p>`; return; }
+        c.innerHTML = `<div class="grid-2">
+            <div class="card"><h3>Gunluk Ozet</h3>
+                <div class="stats-grid" style="grid-template-columns:1fr 1fr;gap:8px;">
+                    <div class="stat-card" style="padding:12px;"><div class="label">Surus</div><div class="value" style="font-size:20px;">${r.summary.driving.toFixed(1)}h</div></div>
+                    <div class="stat-card" style="padding:12px;"><div class="label">Nobet</div><div class="value" style="font-size:20px;">${r.summary.onDuty.toFixed(1)}h</div></div>
+                    <div class="stat-card" style="padding:12px;"><div class="label">Dinlenme</div><div class="value" style="font-size:20px;">${r.summary.offDuty.toFixed(1)}h</div></div>
+                    <div class="stat-card" style="padding:12px;"><div class="label">Uyku</div><div class="value" style="font-size:20px;">${r.summary.sleeper.toFixed(1)}h</div></div>
+                </div>
+            </div>
+            <div class="card"><h3>Kayitlar (${r.logs.length})</h3>
+                ${r.logs.length === 0 ? '<p style="color:var(--text2);font-size:13px;">Kayit yok</p>' :
+                '<div style="max-height:300px;overflow-y:auto;">'+r.logs.map(l => `<div style="padding:8px;border-bottom:1px solid var(--surface2);font-size:13px;display:flex;justify-content:space-between;">
+                    <span>${l.status} - ${l.driverName || l.driverId}</span><span style="color:var(--text2);">${new Date(l.startTime).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}</span>
+                </div>`).join('')+'</div>'}
+            </div>
+        </div>`;
+    }).catch(() => showNotification('ELD hatasi', 'error'));
+}
+
+// ANOMALY
+async function loadAnomalyDevices() { /* same as reports */ }
+async function loadAnomalies() {
+    try {
+        const deviceId = document.getElementById('anomalyDevice').value;
+        const severity = document.getElementById('anomalySeverity').value;
+        let url = '/anomaly?limit=50';
+        if (deviceId) url += `&deviceId=${deviceId}`;
+        if (severity) url += `&severity=${severity}`;
+        const anoms = await api(url);
+        const c = document.getElementById('anomalyList');
+        if (anoms.length === 0) { c.innerHTML = '<p style="color:var(--text2);">Anomali bulunamadi</p>'; return; }
+        c.innerHTML = anoms.map(a => `<div class="alert-item ${a.severity === 'critical' ? 'critical' : a.severity === 'high' ? 'critical' : 'warning'}">
+            <div class="msg"><strong>${a.type}</strong> - ${a.deviceId}<br>${a.description || a.title || ''}</div>
+            <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:12px;color:var(--text2);">${a.severity} | ${new Date(a.createdAt).toLocaleString('tr-TR')}</div>
+                ${!a.acknowledged ? `<button onclick="ackAnomaly('${a._id}')" style="margin-top:4px;padding:4px 8px;background:var(--primary);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:11px;">Onayla</button>` : ''}
+            </div>
+        </div>`).join('');
+    } catch(e) { showNotification('Anomali hatasi', 'error'); }
+}
+
+async function ackAnomaly(id) {
+    try { await api(`/anomaly/${id}/acknowledge`, { method:'PUT' }); showNotification('Onaylandi', 'success'); loadAnomalies(); }
+    catch(e) { showNotification('Hata', 'error'); }
+}
+
+// SETTINGS
+function updateProfile() {
+    const name = document.getElementById('settingsName').value;
+    if (!name) return;
+    api('/auth/me', { method:'PUT', body:JSON.stringify({ name }) }).then(() => showNotification('Profil guncellendi', 'success'));
+}
+
+function changePassword() {
+    const cp = document.getElementById('pwdCurrent').value;
+    const np = document.getElementById('pwdNew').value;
+    if (!cp || !np) { showNotification('Sifreleri girin', 'error'); return; }
+    api('/auth/me/password', { method:'PUT', body:JSON.stringify({ currentPassword:cp, newPassword:np }) }).then(r => {
+        if (r.message) { showNotification('Sifre degisti', 'success'); document.getElementById('pwdCurrent').value = ''; document.getElementById('pwdNew').value = ''; }
+        else showNotification(r.error || 'Hata', 'error');
+    });
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', checkAuth);
+</script>
+</body>
+</html>

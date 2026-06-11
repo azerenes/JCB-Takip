@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCB Tracker - Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="notificationContainer" style="position:fixed;top:70px;right:20px;z-index:9999"></div>
+    <nav class="navbar">
+        <div class="nav-brand">JCB Tracker</div>
+        <div class="nav-links">
+            <a href="app.html">Harita</a>
+            <a href="dashboard.html" class="active">Dashboard</a>
+            <a href="eld.html">ELD</a>
+            <a href="anomaly.html">Anomali</a>
+            <a href="reports.html">Raporlar</a>
+            <span id="userName" style="font-size:12px;color:var(--text-secondary);margin:0 8px"></span>
+            <a href="#" id="logoutBtn">Çıkış</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Toplam Cihaz</div>
+                <div class="stat-value" id="totalDevices">-</div>
+            </div>
+            <div class="stat-card active">
+                <div class="stat-label">Aktif</div>
+                <div class="stat-value" id="activeDevices">-</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-label">Uyarılar</div>
+                <div class="stat-value" id="unacknowledgedAlerts">-</div>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-label">Kritik</div>
+                <div class="stat-value" id="criticalAlerts">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Çevrimiçi</div>
+                <div class="stat-value" id="onlineDevices">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Gruplar</div>
+                <div class="stat-value" id="totalGroups">-</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Cihaz Durumu</h3>
+                <canvas id="deviceChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Uyarı Dağılımı</h3>
+                <canvas id="alertChart"></canvas>
+            </div>
+        </div>
+
+        <div class="alerts-table-container">
+            <div class="alerts-header">
+                <h3>Son Uyarılar</h3>
+                <div class="alerts-filters">
+                    <select id="alertSeverityFilter">
+                        <option value="">Tümü</option>
+                        <option value="critical">Kritik</option>
+                        <option value="warning">Uyarı</option>
+                        <option value="info">Bilgi</option>
+                    </select>
+                    <button onclick="loadAlerts()">Yenile</button>
+                </div>
+            </div>
+            <table class="alerts-table" id="alertsTable">
+                <thead>
+                    <tr>
+                        <th>Cihaz</th>
+                        <th>Tür</th>
+                        <th>Mesaj</th>
+                        <th>Seviye</th>
+                        <th>Tarih</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody id="alertsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

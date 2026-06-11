@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCB Tracker - Canlı Harita</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div id="tenantBrand" style="text-align:center;margin-bottom:16px">
+                <h2 id="loginTitle">JCB Tracker</h2>
+                <p id="loginSubtitle" style="color:var(--text-secondary);font-size:13px">İş Makineleri Takip Sistemi</p>
+            </div>
+            <div id="loginError" style="color:var(--danger);margin-bottom:12px;font-size:13px"></div>
+            <input type="email" id="loginEmail" placeholder="E-posta" required>
+            <input type="password" id="loginPassword" placeholder="Şifre" required>
+            <button onclick="login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value)">Giriş Yap</button>
+            <div id="loginHelp" style="margin-top:12px;font-size:12px;color:var(--text-secondary);text-align:center">
+                Demo: admin@jcbtracker.com / admin123<br>
+                <a href="/" style="color:var(--primary)">Ana Sayfa</a>
+            </div>
+        </div>
+    </div>
+    <div id="notificationContainer" style="position:fixed;top:70px;right:20px;z-index:9999"></div>
+
+    <nav class="navbar">
+        <div class="nav-brand">JCB Tracker</div>
+        <div class="nav-links">
+            <a href="app.html" class="active">Harita</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="eld.html">ELD</a>
+            <a href="anomaly.html">Anomali</a>
+            <a href="reports.html">Raporlar</a>
+            <a href="#" id="usersLink" class="role-admin" style="display:none">Kullanıcılar</a>
+            <a href="#" id="otaLink" class="role-operator" style="display:none">OTA</a>
+            <a href="superadmin.html" id="superadminLink" style="display:none">Süper Admin</a>
+            <span id="userName" style="font-size:12px;color:var(--text-secondary);margin:0 8px"></span>
+            <a href="#" id="logoutBtn">Çıkış</a>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <aside class="sidebar" id="deviceList">
+            <div class="sidebar-header">
+                <h3>Cihazlar</h3>
+                <div class="filter-group">
+                    <select id="groupFilter"><option value="">Tüm Gruplar</option></select>
+                    <input type="text" id="searchDevice" placeholder="Ara..." />
+                </div>
+            </div>
+            <div class="device-items" id="deviceItems"></div>
+        </aside>
+        <main class="map-container"><div id="map"></div></main>
+        <aside class="info-panel" id="infoPanel">
+            <div class="info-header"><h3 id="infoTitle">Cihaz Detayı</h3><button onclick="closeInfo()">×</button></div>
+            <div id="infoContent" class="info-content"><p>Haritada bir cihaz seçin</p></div>
+        </aside>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        document.getElementById('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
+        document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginModal').querySelector('button').click(); });
+        document.addEventListener('DOMContentLoaded', () => { checkAuth().then(a => { if (a) initPage(); }); });
+    </script>
+</body>
+</html>

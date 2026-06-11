@@ -1,0 +1,66 @@
+{
+  "name": "jcb-tracker-desktop",
+  "version": "2.0.0",
+  "description": "JCB Tracker - Professional IoT Fleet Tracking Desktop App",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "node test-server.js",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux AppImage",
+    "pack": "electron-builder --win --dir"
+  },
+  "build": {
+    "appId": "com.jcbtracker.desktop",
+    "productName": "JCB Tracker",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/favicon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "runAfterFinish": true
+    }
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "csv-writer": "^1.6.0",
+    "csv-writer": "^1.6.0",
+    "electron-store": "^8.2.0",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mqtt": "^5.3.5",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.8",
+    "pdfkit": "^0.13.0",
+    "socket.io": "^4.7.2",
+    "sql.js": "^1.11.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0"
+  }
+}

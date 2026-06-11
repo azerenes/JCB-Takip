@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCB Tracker - Super Admin</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="notificationContainer" style="position:fixed;top:70px;right:20px;z-index:9999"></div>
+    <nav class="navbar">
+        <div class="nav-brand">JCB Tracker</div>
+        <div class="nav-links">
+            <a href="app.html">Harita</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="eld.html">ELD</a>
+            <a href="anomaly.html">Anomali</a>
+            <a href="reports.html">Raporlar</a>
+            <a href="superadmin.html" class="active">Süper Admin</a>
+            <span id="userName" style="font-size:12px;color:var(--text-secondary);margin:0 8px"></span>
+            <a href="#" id="logoutBtn">Çıkış</a>
+        </div>
+    </nav>
+
+    <div class="superadmin-container">
+        <div class="superadmin-header">
+            <h1>Süper Admin Paneli</h1>
+            <button onclick="showTenantModal()" class="landing-btn landing-btn-primary">+ Yeni Firma</button>
+        </div>
+
+        <div class="superadmin-stats" id="saStats">
+            <div class="stat-card"><div class="stat-label">Toplam Firma</div><div class="stat-value" id="saTotalTenants">-</div></div>
+            <div class="stat-card active"><div class="stat-label">Aktif Lisans</div><div class="stat-value" id="saActiveLicenses">-</div></div>
+            <div class="stat-card warning"><div class="stat-label">Deneme</div><div class="stat-value" id="saTrialTenants">-</div></div>
+            <div class="stat-card danger"><div class="stat-label">Süresi Dolan</div><div class="stat-value" id="saExpiredTenants">-</div></div>
+        </div>
+
+        <div class="sa-tab-bar">
+            <button class="sa-tab active" onclick="switchSaTab('tenants', this)">Firmalar</button>
+            <button class="sa-tab" onclick="switchSaTab('licenses', this)">Lisanslar</button>
+            <button class="sa-tab" onclick="switchSaTab('stats', this)">Sistem</button>
+        </div>
+
+        <div id="saTabTenants">
+            <table class="tenant-table">
+                <thead><tr>
+                    <th>Firma</th><th>E-posta</th><th>Lisans</th><th>Cihaz</th><th>Kullanıcı</th><th>Bitiş</th><th>İşlem</th>
+                </tr></thead>
+                <tbody id="saTenantBody"></tbody>
+            </table>
+        </div>
+
+        <div id="saTabLicenses" style="display:none">
+            <table class="tenant-table">
+                <thead><tr>
+                    <th>Firma</th><th>Anahtar</th><th>Tip</th><th>Cihaz Limiti</th><th>Oluşturma</th><th>Bitiş</th>
+                </tr></thead>
+                <tbody id="saLicenseBody"></tbody>
+            </table>
+        </div>
+
+        <div id="saTabStats" style="display:none">
+            <div class="charts-grid" style="grid-template-columns:1fr 1fr">
+                <div class="chart-card"><h3>Sistem Özeti</h3><pre id="saSystemInfo" style="margin-top:16px;font-size:13px;color:var(--text-secondary)"></pre></div>
+                <div class="chart-card"><h3>Son Aktiviteler</h3><pre id="saRecentActivity" style="margin-top:16px;font-size:13px;color:var(--text-secondary)"></pre></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tenant Modal -->
+    <div class="sa-modal-overlay" id="tenantModal">
+        <div class="sa-modal">
+            <h3 id="tenantModalTitle">Yeni Firma Ekle</h3>
+            <input type="hidden" id="tenantId" />
+            <div class="form-group"><label>Firma Adı</label><input type="text" id="tCompanyName" /></div>
+            <div class="form-group"><label>Slug</label><input type="text" id="tSlug" /></div>
+            <div class="form-group"><label>E-posta</label><input type="email" id="tEmail" /></div>
+            <div class="form-group"><label>Telefon</label><input type="text" id="tPhone" /></div>
+            <div class="form-group"><label>Lisans Tipi</label>
+                <select id="tLicenseType"><option value="trial">Deneme</option><option value="professional">Profesyonel</option><option value="enterprise">Kurumsal</option></select>
+            </div>
+            <div class="form-group"><label>Cihaz Limiti</label><input type="number" id="tDeviceLimit" value="10" /></div>
+            <div class="form-group"><label>Kullanıcı Limiti</label><input type="number" id="tUserLimit" value="5" /></div>
+            <div class="form-group"><label>Bitiş Tarihi</label><input type="date" id="tExpires" /></div>
+            <div class="modal-actions">
+                <button onclick="closeTenantModal()" class="landing-btn landing-btn-secondary">İptal</button>
+                <button onclick="saveTenant()" class="landing-btn landing-btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="superadmin.js"></script>
+</body>
+</html>

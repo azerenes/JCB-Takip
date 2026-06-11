@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCB Tracker - Anomali Tespiti</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="notificationContainer" style="position:fixed;top:70px;right:20px;z-index:9999"></div>
+    <nav class="navbar">
+        <div class="nav-brand">JCB Tracker</div>
+        <div class="nav-links">
+            <a href="app.html">Harita</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="eld.html">ELD</a>
+            <a href="anomaly.html" class="active">Anomali</a>
+            <a href="reports.html">Raporlar</a>
+            <span id="userName" style="font-size:12px;color:var(--text-secondary);margin:0 8px"></span>
+            <a href="#" id="logoutBtn">Çıkış</a>
+        </div>
+    </nav>
+
+    <div class="anomaly-container">
+        <div class="anomaly-header">
+            <h1>AI Anomali Tespit Sistemi</h1>
+            <div class="anomaly-controls">
+                <select id="anomalyDevice"><option value="">Tüm Cihazlar</option></select>
+                <select id="anomalyType">
+                    <option value="">Tüm Tipler</option>
+                    <option value="fuel_drop">Yakıt Düşüşü</option>
+                    <option value="fuel_surge">Yakıt Artışı</option>
+                    <option value="route_deviation">Rota Sapması</option>
+                    <option value="excessive_speed">Aşırı Hız</option>
+                    <option value="excessive_idle">Aşırı Rölanti</option>
+                    <option value="battery_drain">Batarya Sorunu</option>
+                    <option value="maintenance_due">Bakım Zamanı</option>
+                    <option value="gps_loss">GPS Kaybı</option>
+                </select>
+                <select id="anomalySeverity">
+                    <option value="">Tüm Seviyeler</option>
+                    <option value="critical">Kritik</option>
+                    <option value="high">Yüksek</option>
+                    <option value="medium">Orta</option>
+                    <option value="low">Düşük</option>
+                </select>
+                <button onclick="loadAnomalies()" class="btn-primary">Yenile</button>
+            </div>
+        </div>
+
+        <div class="anomaly-stats-grid">
+            <div class="stat-card danger"><div class="stat-label">Kritik (Açık)</div><div class="stat-value" id="anomalyCritical">-</div></div>
+            <div class="stat-card warning"><div class="stat-label">Yüksek (Açık)</div><div class="stat-value" id="anomalyHigh">-</div></div>
+            <div class="stat-card"><div class="stat-label">Toplam Anomali</div><div class="stat-value" id="anomalyTotal">-</div></div>
+        </div>
+
+        <div class="anomaly-trend-chart">
+            <canvas id="anomalyTrendChart" height="200"></canvas>
+        </div>
+
+        <div class="anomaly-list" id="anomalyList"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="app.js"></script>
+    <script>document.addEventListener('DOMContentLoaded', () => { checkAuth().then(a => { if (a) initAnomalyPage(); }); });</script>
+</body>
+</html>
