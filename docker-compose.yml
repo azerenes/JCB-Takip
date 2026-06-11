@@ -6,6 +6,7 @@ volumes:
   mongo-data:
   emqx-data:
   simulator-state:
+  caddy-data:
 
 services:
   # ===== MQTT Broker =====
@@ -56,8 +57,9 @@ services:
       dockerfile: Dockerfile
     container_name: jcb-server
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"                    # Caddy üzerinden erişilir (direkt erişim için "ports: ['3000:3000']" ekleyin)
+
     environment:
       PORT: 3000
       MONGODB_URI: mongodb://mongo:27017/jcb_tracker
@@ -67,6 +69,7 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@jcbtracker.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
       REQUIRE_SETUP: ${REQUIRE_SETUP:-true}
+      SERVER_URL: ${SERVER_URL:-http://localhost:3000}
       TZ: ${TZ:-Europe/Istanbul}
     volumes:
       - ./server/exports:/app/exports
@@ -95,5 +98,24 @@ services:
         condition: service_started
       server:
         condition: service_started
+    networks:
+      - jcb-net
+
+  # ===== Caddy Reverse Proxy (SSL) =====
+  caddy:
+    image: caddy:2-alpine
+    container_name: jcb-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      ADMIN_EMAIL: ${CADDY_EMAIL:-admin@jcbtracker.com}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+    depends_on:
+      - server
     networks:
       - jcb-net

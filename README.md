@@ -42,23 +42,31 @@
 
 ## 🚀 Hızlı Başlangıç
 
-**Gereksinim:** Docker Desktop (Windows) veya Docker Compose (Linux)
+### ☁️ Kurulum (Linux VPS — Tek Komut)
+
+Yeni bir Ubuntu/Debian sunucuya SSH yapın ve şu komutu çalıştırın:
 
 ```bash
-# 1. Projeyi indir
-git clone https://github.com/azerenes/JCB-Takip.git
-cd JCB-Takip
-
-# 2. Tüm stack'i başlat (MongoDB + EMQX + Sunucu + Simülatör)
-docker compose up -d --build
-
-# 3. Tarayıcıdan aç
-http://localhost:3000
+curl -sSL https://raw.githubusercontent.com/azerenes/JCB-Takip/main/scripts/setup.sh | bash
 ```
 
-İlk çalıştırmada **Setup Sihirbazı** açılır. Lisans anahtarınızı girin, admin hesabı oluşturun, firma bilgilerini girin ve kullanmaya başlayın.
+Script sizden domain adı ve e-posta ister, ardından:
 
-> Demo amaçlı: `REQUIRE_SETUP=false` ile seed verileriyle (admin + demo tenant + 12 simüle cihaz) otomatik başlar.
+- Docker kurulumu (yoksa)
+- Projeyi `/opt/jcb-tracker`'a indirir
+- SSL sertifikası (Let's Encrypt) ile HTTPS kurar
+- Tüm servisleri başlatır
+
+> Tek yapmanız gereken: bir domaini VPS IP'nize yönlendirmek ve scripti çalıştırmak.
+
+### 💻 Yerel Geliştirme (Docker)
+
+```bash
+git clone https://github.com/azerenes/JCB-Takip.git
+cd JCB-Takip
+docker compose up -d --build
+# http://localhost:3000
+```
 
 ---
 
@@ -135,6 +143,12 @@ A turn-key, multi-tenant IoT tracking platform designed for construction equipme
 
 ### Quick Start
 
+**One-command deployment (Ubuntu/Debian VPS):**
+```bash
+curl -sSL https://raw.githubusercontent.com/azerenes/JCB-Takip/main/scripts/setup.sh | bash
+```
+
+**Local development:**
 ```bash
 git clone https://github.com/azerenes/JCB-Takip.git
 cd JCB-Takip

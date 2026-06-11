@@ -1,0 +1,38 @@
+# JCB Tracker - Caddy Reverse Proxy Konfigürasyonu
+# DOMAIN ve ADMIN_EMAIL environment variable olarak geçilir
+# Setupla birlikte scripts/setup.sh bu dosyayı otomatik oluşturur
+
+{$DOMAIN} {
+    # Otomatik Let's Encrypt SSL (Caddy otomatik halleder)
+    tls {$ADMIN_EMAIL}
+
+    # Ana uygulama
+    reverse_proxy server:3000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # WebSocket desteği (canlı harita, bildirimler)
+    @websockets {
+        header Connection *Upgrade*
+        header Upgrade    websocket
+    }
+    reverse_proxy @websockets server:3000
+
+    # Log
+    log {
+        output file /data/access.log
+        format json
+    }
+}
+
+# HTTP'den HTTPS'e yönlendir
+http://{$DOMAIN} {
+    redir https://{$DOMAIN}{uri}
+}
+
+# Health check endpoint
+{$DOMAIN}/health {
+    reverse_proxy server:3000
+}
