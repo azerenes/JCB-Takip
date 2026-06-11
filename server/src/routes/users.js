@@ -46,36 +46,6 @@ router.post('/', auth, requireRole('admin'), async (req, res) => {
     }
 });
 
-router.post('/', auth, requireRole('admin'), async (req, res) => {
-    try {
-        const { email, password, name, role, phone, permissions } = req.body;
-        if (!email || !password || !name) {
-            return res.status(400).json({ error: 'Email, sifre ve isim zorunludur' });
-        }
-
-        const existing = await User.findOne({ email });
-        if (existing) {
-            return res.status(409).json({ error: 'Bu email zaten kayitli' });
-        }
-
-        const defaultPerms = User.getRolePermissions(role || 'viewer');
-        const user = new User({
-            email, password, name,
-            role: role || 'viewer',
-            phone: phone || '',
-            permissions: permissions || defaultPerms
-        });
-
-        await user.save();
-        res.status(201).json({
-            message: 'Kullanici olusturuldu',
-            user: { id: user._id, email: user.email, name: user.name, role: user.role }
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Kullanici olusturulamadi' });
-    }
-});
-
 router.put('/:id', auth, requireRole('admin'), async (req, res) => {
     try {
         const filter = { _id: req.params.id };
@@ -115,8 +85,10 @@ router.delete('/:id', auth, requireRole('admin'), async (req, res) => {
 router.put('/:id/permissions', auth, requireRole('admin'), async (req, res) => {
     try {
         const { permissions } = req.body;
-        const user = await User.findByIdAndUpdate(
-            req.params.id,
+        const filter = { _id: req.params.id };
+        if (req.user.tenantId) filter.tenantId = req.user.tenantId;
+        const user = await User.findOneAndUpdate(
+            filter,
             { $set: { permissions } },
             { new: true }
         ).select('-password');

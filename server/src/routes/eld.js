@@ -82,6 +82,9 @@ router.get('/violations/:deviceId', auth, async (req, res) => {
 
 router.post('/log', auth, requireRole(['admin', 'operator']), async (req, res) => {
     try {
+        if (!(await checkDeviceAccess(req.body.deviceId, req))) {
+            return res.status(400).json({ error: 'Gecersiz cihaz' });
+        }
         const log = new DriverLog(req.body);
         await log.save();
         res.status(201).json(log);
@@ -92,8 +95,13 @@ router.post('/log', auth, requireRole(['admin', 'operator']), async (req, res) =
 
 router.put('/log/:id', auth, requireRole(['admin', 'operator']), async (req, res) => {
     try {
+        const existing = await DriverLog.findById(req.params.id);
+        if (!existing) return res.status(404).json({ error: 'Kayit bulunamadi' });
+        const deviceId = req.body.deviceId || existing.deviceId;
+        if (!(await checkDeviceAccess(deviceId, req))) {
+            return res.status(400).json({ error: 'Gecersiz cihaz' });
+        }
         const log = await DriverLog.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!log) return res.status(404).json({ error: 'Kayit bulunamadi' });
         res.json(log);
     } catch (err) {
         res.status(500).json({ error: 'ELD kaydi guncellenemedi' });

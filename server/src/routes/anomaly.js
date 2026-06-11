@@ -59,14 +59,16 @@ router.get('/stats', auth, scope.scopeMiddleware, async (req, res) => {
     }
 });
 
-router.put('/:id/acknowledge', auth, async (req, res) => {
+router.put('/:id/acknowledge', auth, scope.scopeMiddleware, async (req, res) => {
     try {
-        const anomaly = await AnomalyLog.findByIdAndUpdate(
-            req.params.id,
-            { acknowledged: true, acknowledgedBy: req.user.email || 'unknown' },
-            { new: true }
-        );
+        const anomaly = await AnomalyLog.findById(req.params.id);
         if (!anomaly) return res.status(404).json({ error: 'Anomali bulunamadi' });
+        if (req.tenantDeviceIds && !req.tenantDeviceIds.includes(anomaly.deviceId)) {
+            return res.status(404).json({ error: 'Anomali bulunamadi' });
+        }
+        anomaly.acknowledged = true;
+        anomaly.acknowledgedBy = req.user.email || 'unknown';
+        await anomaly.save();
         res.json(anomaly);
     } catch (err) {
         res.status(500).json({ error: 'Anomali onaylanamadi' });

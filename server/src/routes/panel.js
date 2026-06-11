@@ -88,9 +88,11 @@ router.get('/device-history/:deviceId', auth, scope.scopeMiddleware, async (req,
     }
 });
 
-router.get('/geofences', auth, async (req, res) => {
+router.get('/geofences', auth, scope.scopeMiddleware, async (req, res) => {
     try {
-        const geofences = await Geofence.find({ active: true });
+        const filter = { active: true };
+        if (req.user.tenantId) filter.tenantId = req.user.tenantId;
+        const geofences = await Geofence.find(filter);
         res.json(geofences);
     } catch (err) {
         res.status(500).json({ error: 'Sunucu hatasi' });
@@ -99,7 +101,9 @@ router.get('/geofences', auth, async (req, res) => {
 
 router.post('/geofences', auth, async (req, res) => {
     try {
-        const geofence = new Geofence(req.body);
+        const data = { ...req.body };
+        if (req.user.tenantId) data.tenantId = req.user.tenantId;
+        const geofence = new Geofence(data);
         await geofence.save();
         res.status(201).json(geofence);
     } catch (err) {
@@ -107,9 +111,11 @@ router.post('/geofences', auth, async (req, res) => {
     }
 });
 
-router.delete('/geofences/:id', auth, async (req, res) => {
+router.delete('/geofences/:id', auth, scope.scopeMiddleware, async (req, res) => {
     try {
-        await Geofence.findByIdAndDelete(req.params.id);
+        const filter = { _id: req.params.id };
+        if (req.user.tenantId) filter.tenantId = req.user.tenantId;
+        await Geofence.findOneAndDelete(filter);
         res.json({ message: 'Geofence silindi' });
     } catch (err) {
         res.status(500).json({ error: 'Sunucu hatasi' });
@@ -141,16 +147,18 @@ router.get('/alerts', auth, scope.scopeMiddleware, async (req, res) => {
     }
 });
 
-router.put('/alerts/:id/acknowledge', auth, async (req, res) => {
+router.put('/alerts/:id/acknowledge', auth, scope.scopeMiddleware, async (req, res) => {
     try {
         const { acknowledgedBy } = req.body;
-        const alert = await Alert.findByIdAndUpdate(req.params.id, {
-            acknowledged: true,
-            acknowledgedBy: acknowledgedBy || 'unknown',
-            acknowledgedAt: new Date()
-        }, { new: true });
-
+        const alert = await Alert.findById(req.params.id);
         if (!alert) return res.status(404).json({ error: 'Uyari bulunamadi' });
+        if (req.tenantDeviceIds && !req.tenantDeviceIds.includes(alert.deviceId)) {
+            return res.status(404).json({ error: 'Uyari bulunamadi' });
+        }
+        alert.acknowledged = true;
+        alert.acknowledgedBy = acknowledgedBy || req.user.email || 'unknown';
+        alert.acknowledgedAt = new Date();
+        await alert.save();
         res.json(alert);
     } catch (err) {
         res.status(500).json({ error: 'Sunucu hatasi' });

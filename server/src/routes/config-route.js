@@ -5,9 +5,10 @@ const auth = require('../middleware/auth');
 const scope = require('../middleware/tenant-scope');
 const requireRole = require('../middleware/require-role');
 
-router.get('/:deviceId', async (req, res) => {
+router.get('/:deviceId', auth, scope.scopeMiddleware, async (req, res) => {
     try {
-        const device = await Device.findOne({ deviceId: req.params.deviceId });
+        const filter = { deviceId: req.params.deviceId, ...scope.deviceFilter(req) };
+        const device = await Device.findOne(filter);
         if (!device) {
             return res.status(404).json({ error: 'Cihaz bulunamadi' });
         }
@@ -19,7 +20,6 @@ router.get('/:deviceId', async (req, res) => {
             gps_timeout_ms: 10000,
             speed_threshold: 90.0,
             wifi_ssid: device.metadata?.wifiSsid || '',
-            wifi_pass: device.metadata?.wifiPass || '',
             gsm_apn: device.metadata?.gsmApn || 'superonline'
         };
 
