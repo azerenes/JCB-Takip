@@ -16,7 +16,7 @@ function seedData() {
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@jcbtracker.com';
     let admin = User.findOne({ email: adminEmail });
 
-    if (!admin && !requireSetup) {
+    if (!admin) {
         const hashedPassword = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin123', 10);
         admin = User.create({
             email: adminEmail,

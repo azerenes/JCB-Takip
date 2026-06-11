@@ -1,14 +1,14 @@
 const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
+const config = require('../config');
 
 let db = null;
 let SQL = null;
 
 function getDbPath() {
-    const dataDir = process.env.JCB_DATA_DIR || path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-    return path.join(dataDir, 'jcb_tracker.db');
+    if (!fs.existsSync(config.dataDir)) fs.mkdirSync(config.dataDir, { recursive: true });
+    return path.join(config.dataDir, 'jcb_tracker.db');
 }
 
 async function connect() {

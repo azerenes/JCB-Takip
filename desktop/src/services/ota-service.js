@@ -3,8 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const Device = require('../database/models/Device');
+const config = require('../config');
 
-const FW_DIR = path.join(__dirname, '../../firmware_bin');
+const FW_DIR = path.join(config.dataDir, 'firmware_bin');
 const FW_META_FILE = path.join(FW_DIR, 'firmware.json');
 
 if (!fs.existsSync(FW_DIR)) {

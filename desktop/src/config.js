@@ -1,7 +1,19 @@
 const path = require('path');
 
+function getDataDir() {
+    if (process.env.JCB_DATA_DIR) return process.env.JCB_DATA_DIR;
+    try {
+        const { app } = require('electron');
+        if (app && typeof app.getPath === 'function') {
+            return path.join(app.getPath('userData'), 'data');
+        }
+    } catch (_) {}
+    return path.join(process.cwd(), 'data');
+}
+
 const config = {
     port: parseInt(process.env.JCB_PORT || '3000', 10),
+    get dataDir() { return getDataDir(); },
     mongodbUri: '',
     mqttBroker: process.env.MQTT_BROKER || 'mqtt://localhost:1883',
     mqttWsBroker: process.env.MQTT_WS_BROKER || 'ws://localhost:8083',
@@ -14,7 +26,6 @@ const config = {
     jwtSecret: process.env.JWT_SECRET || 'jcb_desktop_default_secret',
     jwtExpiresIn: '7d',
     ssl: { enabled: false },
-    dataDir: path.join(process.env.JCB_DATA_DIR || process.cwd(), 'data'),
     publicDir: path.join(__dirname, '../public'),
     smtp: {
         host: process.env.SMTP_HOST || '',

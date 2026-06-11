@@ -1,5 +1,23 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
+
+// Desktop app defaults - auto-setup, admin credentials
+process.env.REQUIRE_SETUP = 'false';
+if (!process.env.ADMIN_EMAIL) process.env.ADMIN_EMAIL = 'admin@jcbtracker.com';
+if (!process.env.ADMIN_PASSWORD) process.env.ADMIN_PASSWORD = 'admin123';
+
+// Log all uncaught errors to a file
+function getLogPath() {
+    try { return path.join(app.getPath('userData'), 'crash.log'); } catch (_) { return 'crash.log'; }
+}
+process.on('uncaughtException', (err) => {
+    try { fs.writeFileSync(getLogPath(), new Date().toISOString() + ' UNCAUGHT: ' + (err && err.stack ? err.stack : String(err)) + '\n'); } catch (_) {}
+});
+process.on('unhandledRejection', (err) => {
+    try { fs.appendFileSync(getLogPath(), new Date().toISOString() + ' REJECTION: ' + (err && err.stack ? err.stack : String(err)) + '\n'); } catch (_) {}
+});
+
 const { createServer } = require('./server');
 
 let mainWindow = null;
@@ -11,11 +29,14 @@ function findAvailablePort(startPort) {
     const net = require('net');
     return new Promise((resolve) => {
         const srv = net.createServer();
+        const timeout = setTimeout(() => { srv.close(); resolve(startPort); }, 3000);
         srv.listen(startPort, '127.0.0.1', () => {
+            clearTimeout(timeout);
             const port = srv.address().port;
             srv.close(() => resolve(port));
         });
         srv.on('error', () => {
+            clearTimeout(timeout);
             resolve(findAvailablePort(startPort + 1));
         });
     });
@@ -24,16 +45,21 @@ function findAvailablePort(startPort) {
 async function startServer() {
     try {
         serverPort = await findAvailablePort(parseInt(process.env.JCB_PORT || '3000', 10));
+        console.log('[Desktop] Port bulundu:', serverPort);
         const { server } = await createServer();
+        console.log('[Desktop] Server olusturuldu');
 
         serverInstance = server;
         server.listen(serverPort, '127.0.0.1', () => {
             console.log(`[Desktop] Sunucu baslatildi: http://localhost:${serverPort}`);
             createWindow();
         });
+        server.on('error', (err) => {
+            console.error('[Desktop] Server listen error:', err);
+        });
     } catch (err) {
         console.error('[Desktop] Sunucu hatasi:', err);
-        dialog.showErrorBox('Sunucu Hatasi', 'JCB Tracker baslatilamadi: ' + err.message);
+        dialog.showErrorBox('Sunucu Hatasi', 'JCB Tracker baslatilamadi: ' + (err && err.message));
         app.quit();
     }
 }
