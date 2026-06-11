@@ -75,6 +75,9 @@ function applyRoleBasedUI() {
 
     const userName = document.getElementById('userName');
     if (userName) userName.textContent = currentUser.name + ' (' + role + ')';
+
+    const sal = document.getElementById('superadminLink');
+    if (sal) sal.style.display = currentUser.isSuperAdmin ? '' : 'none';
 }
 
 function getHeaders() {
