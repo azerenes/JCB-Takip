@@ -18,7 +18,7 @@ if %errorlevel% neq 0 (
 echo [OK] Docker calisiyor
 echo.
 echo 2. Servisler baslatiliyor...
-docker-compose up -d
+docker compose up -d --build
 if %errorlevel% neq 0 (
     echo [HATA] Servisler baslatilamadi
     pause
@@ -31,13 +31,17 @@ ping -n 15 127.0.0.1 >nul
 echo.
 echo ===============================
 echo Web Panel: http://localhost:3000
-echo EMQX Dashboard: http://localhost:18083
-echo   (admin / public)
+echo   Landing:  http://localhost:3000/ (ana sayfa)
+echo   Giris:    http://localhost:3000/app.html
+echo   Kayit:    http://localhost:3000/register.html
+echo EMQX Dashboard: http://localhost:18083 (admin / public)
 echo MongoDB: mongodb://localhost:27017
+echo.
+echo Cihaz Simulator: 12 cihaz otomatik calisiyor
 echo.
 echo Giris: admin@jcbtracker.com / admin123
 echo ===============================
 echo.
-echo Durdurmak icin: docker-compose down
+echo Durdurmak icin: docker compose down
 echo.
 pause

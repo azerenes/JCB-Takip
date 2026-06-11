@@ -26,7 +26,7 @@ router.post('/login', async (req, res) => {
         await user.save();
 
         const token = jwt.sign(
-            { userId: user._id, email: user.email, role: user.role },
+            { userId: user._id, email: user.email, role: user.role, isSuperAdmin: user.isSuperAdmin || false, tenantId: user.tenantId || null },
             config.jwtSecret,
             { expiresIn: '24h' }
         );
@@ -38,6 +38,8 @@ router.post('/login', async (req, res) => {
                 email: user.email,
                 name: user.name,
                 role: user.role,
+                isSuperAdmin: user.isSuperAdmin || false,
+                tenantId: user.tenantId || null,
                 permissions: user.permissions
             },
             expiresIn: '24h'
